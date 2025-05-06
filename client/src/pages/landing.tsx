@@ -229,115 +229,186 @@ export function Landing() {
                 </button>
               </div>
               
-              {/* Example container with shadow effect */}
+              {/* Example container with marketplace style */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg transform rotate-1"></div>
-              <div className="relative bg-white rounded-lg shadow-xl overflow-hidden border border-gray-200">
+              <div className="relative bg-white rounded-lg shadow-xl overflow-hidden">
                 <div className="flex flex-col">
-                  <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <div className="text-center">
-                      <div className="text-sm font-semibold text-gray-900 mb-2">BEFORE</div>
-                      <div className="p-3 bg-white rounded border border-gray-200 text-left shadow-sm">
-                        <div className="mb-2">
-                          <span className="text-xs text-gray-500">Title:</span>
-                          <div className="font-medium text-red-500 text-sm mt-1">
-                            {activeTab === 'amazon' && marketplaceExamples.amazon.before.title}
-                            {activeTab === 'ebay' && marketplaceExamples.ebay.before.title}
-                            {activeTab === 'shopify' && marketplaceExamples.shopify.before.title}
+                  {/* Amazon-style listing comparison */}
+                  {activeTab === 'amazon' && (
+                    <>
+                      <div className="px-4 py-3 bg-gray-800 text-white text-sm flex justify-between">
+                        <span>amazon.com</span>
+                        <span>Product Listing</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="p-4 bg-white border-r border-gray-200">
+                          <div className="text-center mb-3">
+                            <div className="text-xs font-semibold uppercase text-gray-500 bg-gray-100 rounded-full px-2 py-1 inline-block">Before</div>
+                          </div>
+                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.amazon.before.title}</div>
+                          <div className="flex items-center mb-2">
+                            <div className="flex mr-2">
+                              {[...Array(3)].map((_, i) => (
+                                <Star key={i} className="h-3 w-3 fill-current text-yellow-400" />
+                              ))}
+                              {[...Array(2)].map((_, i) => (
+                                <Star key={i} className="h-3 w-3 text-gray-300" />
+                              ))}
+                            </div>
+                            <span className="text-xs text-blue-600">12 reviews</span>
+                          </div>
+                          <div className="text-xs mb-3 text-red-600 font-medium">$149.99</div>
+                          <div className="h-[1px] bg-gray-200 my-2"></div>
+                          <div className="text-xs text-gray-600 mb-2">{marketplaceExamples.amazon.before.description}</div>
+                          <ul className="text-xs text-gray-600 space-y-1 pl-3 mb-4">
+                            {marketplaceExamples.amazon.before.bullets.map((bullet, i) => (
+                              <li key={i} className="list-disc list-outside">{bullet}</li>
+                            ))}
+                          </ul>
+                          <div className="mt-auto text-center">
+                            <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full inline-block">
+                              1.2% conversion
+                            </div>
                           </div>
                         </div>
-                        <div className="mb-2">
-                          <span className="text-xs text-gray-500">Description:</span>
-                          <div className="text-gray-600 text-xs mt-1">
-                            {activeTab === 'amazon' && marketplaceExamples.amazon.before.description}
-                            {activeTab === 'ebay' && marketplaceExamples.ebay.before.description}
-                            {activeTab === 'shopify' && marketplaceExamples.shopify.before.description}
+
+                        <div className="p-4 bg-gray-50">
+                          <div className="text-center mb-3">
+                            <div className="text-xs font-semibold uppercase text-white bg-green-600 rounded-full px-2 py-1 inline-block">AI Enhanced</div>
                           </div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-500">Features:</span>
-                          <div className="text-gray-600 text-xs mt-1">
-                            {activeTab === 'amazon' && (
-                              <ul className="text-xs pl-3 space-y-0.5">
-                                {marketplaceExamples.amazon.before.bullets.map((bullet, i) => (
-                                  <li key={i}>• {bullet}</li>
-                                ))}
-                              </ul>
-                            )}
-                            {activeTab === 'ebay' && (
-                              <div className="text-xs">{marketplaceExamples.ebay.before.highlights}</div>
-                            )}
-                            {activeTab === 'shopify' && (
-                              <div className="text-xs">{marketplaceExamples.shopify.before.details}</div>
-                            )}
+                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.amazon.after.title}</div>
+                          <div className="flex items-center mb-2">
+                            <div className="flex mr-2">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className="h-3 w-3 fill-current text-yellow-400" />
+                              ))}
+                            </div>
+                            <span className="text-xs text-blue-600">48 reviews</span>
+                          </div>
+                          <div className="text-xs mb-3 text-red-600 font-medium">$149.99</div>
+                          <div className="h-[1px] bg-gray-200 my-2"></div>
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{marketplaceExamples.amazon.after.description}</div>
+                          <ul className="text-xs text-gray-600 space-y-1 pl-3 mb-4 max-h-24 overflow-hidden">
+                            {marketplaceExamples.amazon.after.bullets.map((bullet, i) => (
+                              <li key={i} className="list-disc list-outside">{bullet}</li>
+                            ))}
+                          </ul>
+                          <div className="mt-auto text-center">
+                            <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full inline-block">
+                              5.4% conversion
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="mt-2 flex items-center justify-center">
-                        <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">
-                          Low conversion rate
-                        </div>
-                        <div className="ml-2 text-xs text-gray-500">~1.2%</div>
+                    </>
+                  )}
+
+                  {/* eBay-style listing comparison */}
+                  {activeTab === 'ebay' && (
+                    <>
+                      <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-green-400 text-white text-sm flex justify-between">
+                        <span>ebay.com</span>
+                        <span>Product Listing</span>
                       </div>
-                    </div>
+
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="p-4 bg-white border-r border-gray-200">
+                          <div className="text-center mb-3">
+                            <div className="text-xs font-semibold uppercase text-gray-500 bg-gray-100 rounded-full px-2 py-1 inline-block">Before</div>
+                          </div>
+                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.ebay.before.title}</div>
+                          <div className="text-xs mb-3 text-green-600 font-medium">$189.99 <span className="line-through text-gray-400 ml-1">$249.99</span></div>
+                          <div className="bg-blue-50 text-blue-700 text-xs px-2 py-1 mb-3 rounded inline-block">Buy It Now</div>
+                          <div className="h-[1px] bg-gray-200 my-2"></div>
+                          <div className="text-xs text-gray-600 mb-2">{marketplaceExamples.ebay.before.description}</div>
+                          <div className="text-xs mb-4">
+                            <span className="font-medium text-gray-700">Highlights: </span>
+                            <span className="text-gray-600">{marketplaceExamples.ebay.before.highlights}</span>
+                          </div>
+                          <div className="mt-auto text-center">
+                            <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full inline-block">
+                              1.2% conversion
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-gray-50">
+                          <div className="text-center mb-3">
+                            <div className="text-xs font-semibold uppercase text-white bg-green-600 rounded-full px-2 py-1 inline-block">AI Enhanced</div>
+                          </div>
+                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.ebay.after.title}</div>
+                          <div className="text-xs mb-3 text-green-600 font-medium">$189.99 <span className="line-through text-gray-400 ml-1">$249.99</span></div>
+                          <div className="bg-blue-50 text-blue-700 text-xs px-2 py-1 mb-3 rounded inline-block">Buy It Now</div>
+                          <div className="h-[1px] bg-gray-200 my-2"></div>
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{marketplaceExamples.ebay.after.description}</div>
+                          <div className="text-xs mb-4">
+                            <span className="font-medium text-gray-700">Highlights: </span>
+                            <span className="text-gray-600 line-clamp-3">{marketplaceExamples.ebay.after.highlights}</span>
+                          </div>
+                          <div className="mt-auto text-center">
+                            <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full inline-block">
+                              5.4% conversion
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Shopify-style listing comparison */}
+                  {activeTab === 'shopify' && (
+                    <>
+                      <div className="px-4 py-3 bg-gray-900 text-white text-sm flex justify-between">
+                        <span>myshopifystore.com</span>
+                        <span>Product Listing</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="p-4 bg-white border-r border-gray-200">
+                          <div className="text-center mb-3">
+                            <div className="text-xs font-semibold uppercase text-gray-500 bg-gray-100 rounded-full px-2 py-1 inline-block">Before</div>
+                          </div>
+                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.shopify.before.title}</div>
+                          <div className="text-xs mb-3 text-gray-900 font-medium">$49.95</div>
+                          <div className="h-[1px] bg-gray-200 my-2"></div>
+                          <div className="text-xs text-gray-600 mb-2">{marketplaceExamples.shopify.before.description}</div>
+                          <div className="text-xs mb-4">
+                            <span className="font-medium text-gray-700">Details: </span> 
+                            <span className="text-gray-600">{marketplaceExamples.shopify.before.details}</span>
+                          </div>
+                          <div className="mt-auto text-center">
+                            <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full inline-block">
+                              1.2% conversion
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-gray-50">
+                          <div className="text-center mb-3">
+                            <div className="text-xs font-semibold uppercase text-white bg-green-600 rounded-full px-2 py-1 inline-block">AI Enhanced</div>
+                          </div>
+                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.shopify.after.title}</div>
+                          <div className="text-xs mb-3 text-gray-900 font-medium">$49.95</div>
+                          <div className="h-[1px] bg-gray-200 my-2"></div>
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{marketplaceExamples.shopify.after.description}</div>
+                          <div className="text-xs mb-4">
+                            <span className="font-medium text-gray-700">Details: </span>
+                            <span className="text-gray-600 line-clamp-3">{marketplaceExamples.shopify.after.details}</span>
+                          </div>
+                          <div className="mt-auto text-center">
+                            <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full inline-block">
+                              5.4% conversion
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="bg-gray-100 p-3 text-center text-xs text-gray-500 border-t border-gray-200">
+                    <span className="text-green-600 font-semibold">350% increase</span> in conversion rate with AI-enhanced listings
                   </div>
-                  
-                  {/* Arrow indicator */}
-                  <div className="flex justify-center -my-3 relative z-10">
-                    <div className="bg-yellow-500 text-white rounded-full p-2 shadow-md">
-                      <ChevronRight className="h-5 w-5 transform rotate-90" />
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-green-50">
-                    <div className="text-center">
-                      <div className="text-sm font-semibold text-gray-900 mb-2">AFTER AI ENHANCEMENT</div>
-                      <div className="p-3 bg-white rounded border border-green-200 text-left shadow-sm">
-                        <div className="mb-2">
-                          <span className="text-xs text-gray-500">Title:</span>
-                          <div className="font-medium text-gray-900 text-sm mt-1">
-                            {activeTab === 'amazon' && marketplaceExamples.amazon.after.title}
-                            {activeTab === 'ebay' && marketplaceExamples.ebay.after.title}
-                            {activeTab === 'shopify' && marketplaceExamples.shopify.after.title}
-                          </div>
-                        </div>
-                        <div className="mb-2">
-                          <span className="text-xs text-gray-500">Description:</span>
-                          <div className="text-gray-600 text-xs mt-1 line-clamp-2">
-                            {activeTab === 'amazon' && marketplaceExamples.amazon.after.description}
-                            {activeTab === 'ebay' && marketplaceExamples.ebay.after.description}
-                            {activeTab === 'shopify' && marketplaceExamples.shopify.after.description}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-500">Features:</span>
-                          <div className="text-gray-600 text-xs mt-1">
-                            {activeTab === 'amazon' && (
-                              <ul className="text-xs pl-3 space-y-0.5 max-h-16 overflow-hidden">
-                                {marketplaceExamples.amazon.after.bullets.map((bullet, i) => (
-                                  <li key={i}>• {bullet}</li>
-                                ))}
-                              </ul>
-                            )}
-                            {activeTab === 'ebay' && (
-                              <div className="text-xs line-clamp-2">{marketplaceExamples.ebay.after.highlights}</div>
-                            )}
-                            {activeTab === 'shopify' && (
-                              <div className="text-xs line-clamp-2">{marketplaceExamples.shopify.after.details}</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-2 flex items-center justify-center">
-                        <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">
-                          Higher conversion rate
-                        </div>
-                        <div className="ml-2 text-xs font-medium text-green-600">~5.4%</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 p-3 text-center text-xs text-gray-500 border-t border-gray-200">
-                  <span className="text-green-600 font-semibold">350% increase</span> in conversion rate!
                 </div>
               </div>
               
@@ -580,27 +651,61 @@ export function Landing() {
               <div className="p-8 lg:p-12">
                 <div className="flex items-center">
                   <span className="bg-indigo-100 text-indigo-600 font-bold text-xs uppercase rounded-full px-3 py-1">
-                    Limited Time Offer
+                    Special Offer
                   </span>
                   <div className="ml-3 pl-3 border-l border-gray-300">
                     <div className="text-sm">
-                      <span className="text-gray-500 line-through">$99/mo</span>
-                      <span className="ml-2 text-green-600 font-semibold">$49/mo</span>
+                      <span className="text-green-600 font-semibold">First 5 products FREE</span>
                     </div>
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-bold text-gray-900 mt-6 mb-2">Premium Plan</h3>
-                <p className="text-gray-600 mb-6">Everything you need to optimize your product listings</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-6 mb-2">Simple, Pay-As-You-Grow Pricing</h3>
+                <p className="text-gray-600 mb-6">Only pay for what you need with our flexible product-based pricing</p>
+                
+                <div className="space-y-4 mb-6 border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="bg-green-50 p-4 border-b border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold text-gray-900">First 5 products</span>
+                      </div>
+                      <div className="font-bold text-green-600">FREE</div>
+                    </div>
+                  </div>
+                  <div className="p-4 border-b border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold text-gray-900">10 products</span>
+                      </div>
+                      <div className="font-bold text-gray-900">$20</div>
+                    </div>
+                  </div>
+                  <div className="p-4 border-b border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold text-gray-900">20 products</span>
+                      </div>
+                      <div className="font-bold text-gray-900">$40</div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-gray-50">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold text-gray-900">+ each additional 10 products</span>
+                      </div>
+                      <div className="font-bold text-gray-900">+$20</div>
+                    </div>
+                  </div>
+                </div>
                 
                 <ul className="space-y-4 mb-8">
                   {[
-                    "Unlimited product enhancements",
                     "AI-generated titles, descriptions & bullet points",
                     "Multi-marketplace format support",
+                    "Before & after comparison views",
                     "Bulk CSV import and export",
-                    "API access for seamless integration",
-                    "24/7 priority customer support"
+                    "7-day money-back guarantee",
+                    "Unlimited access to enhanced product data"
                   ].map((feature, i) => (
                     <li key={i} className="flex items-start">
                       <div className="flex-shrink-0 h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
@@ -611,22 +716,13 @@ export function Landing() {
                   ))}
                 </ul>
                 
-                <div className="relative mb-8">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">50% discount ends soon</span>
-                  </div>
-                </div>
-                
                 <Link href="/app">
                   <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-base mb-4">
-                    Get 50% OFF - Try Now <ArrowRight className="ml-2 h-4 w-4" />
+                    Start Enhancing Products <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
                 <p className="text-center text-sm text-gray-500">
-                  No credit card required for 7-day free trial • Cancel anytime
+                  No credit card required for your free 5 products
                 </p>
               </div>
               
