@@ -651,78 +651,164 @@ export function Landing() {
               <div className="p-8 lg:p-12">
                 <div className="flex items-center">
                   <span className="bg-indigo-100 text-indigo-600 font-bold text-xs uppercase rounded-full px-3 py-1">
-                    Special Offer
+                    Launch Pricing
                   </span>
                   <div className="ml-3 pl-3 border-l border-gray-300">
                     <div className="text-sm">
-                      <span className="text-green-600 font-semibold">First 5 products FREE</span>
+                      <span className="text-green-600 font-semibold">25% off all plans</span>
                     </div>
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-bold text-gray-900 mt-6 mb-2">Simple, Pay-As-You-Grow Pricing</h3>
-                <p className="text-gray-600 mb-6">Only pay for what you need with our flexible product-based pricing</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-6 mb-2">Subscription Plans</h3>
+                <p className="text-gray-600 mb-6">Choose the plan that fits your business needs</p>
                 
-                <div className="space-y-4 mb-6 border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="bg-green-50 p-4 border-b border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-semibold text-gray-900">First 5 products</span>
+                <div className="space-y-4 mb-6">
+                  {/* Starter Plan */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 p-4 border-b border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-gray-900 text-lg">Starter</span>
+                          <p className="text-gray-500 text-sm mt-1">Perfect for small sellers</p>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-sm line-through">$19/mo</div>
+                          <div className="font-bold text-gray-900 text-xl">$14/mo</div>
+                        </div>
                       </div>
-                      <div className="font-bold text-green-600">FREE</div>
+                    </div>
+                    <div className="p-4">
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span><strong>10 product enhancements</strong> per month</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>All marketplace formats</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Standard AI quality</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Email support</span>
+                        </li>
+                      </ul>
                     </div>
                   </div>
-                  <div className="p-4 border-b border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-semibold text-gray-900">10 products</span>
+                  
+                  {/* Growth Plan - Highlighted */}
+                  <div className="border-2 border-indigo-500 rounded-lg overflow-hidden relative">
+                    <div className="absolute top-0 right-0 bg-indigo-500 text-white text-xs font-bold px-3 py-1 transform translate-x-2 -translate-y-2">
+                      POPULAR
+                    </div>
+                    <div className="bg-indigo-50 p-4 border-b border-indigo-100">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-gray-900 text-lg">Growth</span>
+                          <p className="text-gray-500 text-sm mt-1">Ideal for growing businesses</p>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-sm line-through">$39/mo</div>
+                          <div className="font-bold text-indigo-600 text-xl">$29/mo</div>
+                        </div>
                       </div>
-                      <div className="font-bold text-gray-900">$20</div>
+                    </div>
+                    <div className="p-4">
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span><strong>50 product enhancements</strong> per month</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>All marketplace formats</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Premium AI quality</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Priority support</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Bulk CSV processing</span>
+                        </li>
+                      </ul>
                     </div>
                   </div>
-                  <div className="p-4 border-b border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-semibold text-gray-900">20 products</span>
+                  
+                  {/* Pro Plan */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 p-4 border-b border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-gray-900 text-lg">Pro</span>
+                          <p className="text-gray-500 text-sm mt-1">For high-volume sellers</p>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-sm line-through">$99/mo</div>
+                          <div className="font-bold text-gray-900 text-xl">$74/mo</div>
+                        </div>
                       </div>
-                      <div className="font-bold text-gray-900">$40</div>
                     </div>
-                  </div>
-                  <div className="p-4 bg-gray-50">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-semibold text-gray-900">+ each additional 10 products</span>
-                      </div>
-                      <div className="font-bold text-gray-900">+$20</div>
+                    <div className="p-4">
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span><strong>Unlimited product enhancements</strong></span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>All marketplace formats</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Advanced AI quality</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Dedicated support</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>API access</span>
+                        </li>
+                        <li className="flex items-center">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>Advanced analytics</span>
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </div>
                 
-                <ul className="space-y-4 mb-8">
-                  {[
-                    "AI-generated titles, descriptions & bullet points",
-                    "Multi-marketplace format support",
-                    "Before & after comparison views",
-                    "Bulk CSV import and export",
-                    "7-day money-back guarantee",
-                    "Unlimited access to enhanced product data"
-                  ].map((feature, i) => (
-                    <li key={i} className="flex items-start">
-                      <div className="flex-shrink-0 h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      </div>
-                      <span className="ml-3 text-gray-600">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-8">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 mt-1">
+                      <Shield className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-gray-900">Try before you buy</h4>
+                      <p className="text-xs text-gray-600 mt-1">
+                        All plans include a 3-day free trial with 5 product enhancements. No credit card required to start.
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 
                 <Link href="/app">
                   <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-base mb-4">
-                    Start Enhancing Products <ArrowRight className="ml-2 h-4 w-4" />
+                    Start Your Free Trial <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
                 <p className="text-center text-sm text-gray-500">
-                  No credit card required for your free 5 products
+                  30-day money-back guarantee • Cancel anytime
                 </p>
               </div>
               
@@ -806,13 +892,13 @@ export function Landing() {
           
           <Link href="/app">
             <Button size="lg" className="mx-auto text-lg px-10 py-6 bg-white text-indigo-700 hover:bg-indigo-50 font-bold shadow-lg hover:shadow-xl transition-all">
-              Start Free Trial
+              Try For Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
           
           <p className="mt-4 text-sm text-indigo-200">
-            No credit card required • 7-day free trial • Cancel anytime
+            3-day free trial with 5 product enhancements • No credit card required
           </p>
           
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 md:gap-12">
