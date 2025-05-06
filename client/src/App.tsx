@@ -1,13 +1,15 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
-import Home from "@/pages/home";
+import Landing from "@/pages/landing";
+import ApplicationPage from "@/pages/app";
 import { useEffect } from "react";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={Landing} />
+      <Route path="/app" component={ApplicationPage} />
       <Route component={NotFound} />
     </Switch>
   );

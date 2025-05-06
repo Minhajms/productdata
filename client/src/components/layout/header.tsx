@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ShoppingBasket, HelpCircle } from "lucide-react";
+import { ShoppingBasket } from "lucide-react";
 
 interface HeaderProps {
   className?: string;
@@ -16,25 +16,24 @@ export function Header({ className }: HeaderProps) {
         <nav>
           <ul className="flex space-x-6">
             <li>
-              <Link href="/">
-                <a className="text-gray-600 hover:text-primary text-sm font-medium">Dashboard</a>
+              <Link href="/" className="text-gray-600 hover:text-primary text-sm font-medium">
+                Home
               </Link>
             </li>
             <li>
-              <Link href="/history">
-                <a className="text-gray-600 hover:text-primary text-sm font-medium">History</a>
+              <Link href="/app" className="text-gray-600 hover:text-primary text-sm font-medium">
+                Get Started
               </Link>
             </li>
             <li>
-              <Link href="/settings">
-                <a className="text-gray-600 hover:text-primary text-sm font-medium">Settings</a>
+              <Link href="#features" className="text-gray-600 hover:text-primary text-sm font-medium">
+                Features
               </Link>
             </li>
             <li>
-              <button className="flex items-center text-gray-600 hover:text-primary text-sm font-medium">
-                <HelpCircle className="h-4 w-4 mr-1" />
-                Help
-              </button>
+              <Link href="#about" className="text-gray-600 hover:text-primary text-sm font-medium">
+                About Us
+              </Link>
             </li>
           </ul>
         </nav>
