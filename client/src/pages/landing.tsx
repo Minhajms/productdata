@@ -449,9 +449,83 @@ export function Landing() {
           </div>
         </div>
       </section>
+      
+      {/* How It Works section with unique features */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-block px-3 py-1 text-xs font-semibold tracking-wider text-indigo-600 uppercase bg-indigo-100 rounded-full mb-4">How It Works</span>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Simple, Powerful, Unique Features</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              We've built our product enhancer with simplicity and effectiveness in mind. Here's what makes us different:
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {/* One-Click Enhancement */}
+            <div className="bg-white rounded-lg p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6 text-2xl font-bold">1</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">One-Click Enhancement</h3>
+              <p className="text-gray-600 mb-5">
+                Simply upload your product data and get AI-enhanced listings with a single click. No complex settings or technical knowledge required.
+              </p>
+              <div className="bg-indigo-50 p-3 rounded-lg">
+                <div className="flex items-center text-sm text-indigo-700">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                    <div className="text-indigo-600 font-bold">⚡</div>
+                  </div>
+                  <span>Enhance listings in seconds, not hours</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Smart Templates */}
+            <div className="bg-white rounded-lg p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6 text-2xl font-bold">2</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Templates</h3>
+              <p className="text-gray-600 mb-5">
+                Choose from dozens of pre-configured templates for different product categories. Our AI automatically applies the best format for your specific products.
+              </p>
+              <div className="bg-indigo-50 p-3 rounded-lg">
+                <div className="flex items-center text-sm text-indigo-700">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                    <div className="text-indigo-600 font-bold">📋</div>
+                  </div>
+                  <span>Templates for 50+ product categories</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Competitor Analysis */}
+            <div className="bg-white rounded-lg p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-6 text-2xl font-bold">3</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Competitor Analysis</h3>
+              <p className="text-gray-600 mb-5">
+                See how your listings compare to top competitors in the marketplace. Get AI recommendations to outperform similar products.
+              </p>
+              <div className="bg-indigo-50 p-3 rounded-lg">
+                <div className="flex items-center text-sm text-indigo-700">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                    <div className="text-indigo-600 font-bold">📊</div>
+                  </div>
+                  <span>Optimize to outrank competitors</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-16 text-center">
+            <Link href="/app">
+              <Button className="mx-auto bg-indigo-600 hover:bg-indigo-700">
+                Explore All Features <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Pain points section - Leveraging loss aversion */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <span className="bg-red-100 text-red-600 text-sm font-semibold px-3 py-1 rounded-full">WARNING</span>
@@ -522,7 +596,7 @@ export function Landing() {
       </section>
 
       {/* Social proof section - Building trust with authentic examples */}
-      <section className="py-20 bg-gray-50 relative overflow-hidden">
+      <section className="py-20 bg-white relative overflow-hidden">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E\")" }}></div>
