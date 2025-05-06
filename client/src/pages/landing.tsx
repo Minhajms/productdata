@@ -120,32 +120,17 @@ export function Landing() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Sticky notification bar - creates urgency */}
-      <div className="bg-gradient-to-r from-red-600 to-red-500 text-white py-2 sticky top-0 z-40">
+      {/* Simplified notification bar with subtle urgency */}
+      <div className="bg-blue-600 text-white py-2 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-center sm:justify-between items-center text-sm font-medium">
             <div className="flex items-center">
-              <span className="hidden sm:inline">🔥 Special Launch Offer:</span> 
-              <span className="sm:ml-2">50% OFF Premium Plan Ends In: </span>
-              <span className="ml-2 bg-white/20 px-2 py-1 rounded font-mono">{countdownValue}</span>
+              <span className="hidden sm:inline">Special Launch Offer:</span> 
+              <span className="sm:ml-2">50% OFF Premium Plan for Early Adopters</span>
             </div>
-            <Link href="/app" className="mt-2 sm:mt-0 bg-white text-red-600 py-1 px-4 rounded-full text-xs font-bold hover:bg-red-50 transition-colors">
-              CLAIM OFFER NOW
+            <Link href="/app" className="mt-2 sm:mt-0 bg-white text-blue-600 py-1 px-4 rounded-full text-xs font-bold hover:bg-blue-50 transition-colors">
+              Get Started
             </Link>
-          </div>
-        </div>
-      </div>
-      
-      {/* Floating FOMO notification */}
-      <div className="fixed bottom-4 left-4 bg-white rounded-lg shadow-xl p-3 max-w-xs z-30 animate-fade-in-up transition-opacity duration-300 border border-gray-200">
-        <div className="flex items-start">
-          <div className="bg-green-100 text-green-600 rounded-full p-2 mr-3">
-            <CheckCircle className="h-4 w-4" />
-          </div>
-          <div className="text-sm">
-            <p className="font-semibold text-gray-900">{fomoNotifications[currentFomo].name}</p>
-            <p className="text-gray-600">{fomoNotifications[currentFomo].action}</p>
-            <p className="text-gray-400 text-xs mt-1">{fomoNotifications[currentFomo].time}</p>
           </div>
         </div>
       </div>
@@ -465,7 +450,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Social proof section - Building trust with scarcity */}
+      {/* Social proof section - Building trust with authentic examples */}
       <section className="py-20 bg-gray-50 relative overflow-hidden">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-5">
@@ -474,12 +459,9 @@ export function Landing() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-block bg-indigo-100 text-indigo-800 text-xs font-semibold px-4 py-2 rounded-full mb-3">
-              ONLY 97 SPOTS REMAINING AT CURRENT PRICING
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Join 1,200+ Successful Sellers</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Real Results from Real Sellers</h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              See how e-commerce businesses like yours are saving time and boosting sales with our AI-powered enhancement tool:
+              See how e-commerce businesses are improving their product listings and seeing measurable results:
             </p>
           </div>
           
@@ -712,7 +694,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Final CTA with scarcity and FOMO */}
+      {/* Simple, clear CTA section */}
       <section className="py-20 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute inset-0 opacity-10">
@@ -720,55 +702,35 @@ export function Landing() {
           <div className="absolute left-0 top-0 w-80 h-80 bg-white rounded-full -mt-40 -ml-40"></div>
         </div>
         
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="inline-block px-4 py-2 bg-white/20 rounded-full text-white text-sm font-medium mb-6 animate-pulse">
-            Special Launch Offer - 50% OFF Expires In: {countdownValue}
-          </div>
-          
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Don't Let Your Competitors Outsell You</h2>
-          <p className="text-xl text-indigo-100 mb-8 max-w-3xl mx-auto">
-            Join the 1,200+ sellers who are already using our AI to create high-converting product listings in minutes instead of hours.
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">          
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Product Listings?</h2>
+          <p className="text-xl text-indigo-100 mb-10 max-w-3xl mx-auto">
+            Join thousands of sellers who are saving time and increasing sales with AI-enhanced product listings.
           </p>
           
-          <div className="bg-white/10 rounded-lg p-6 mb-10 max-w-2xl mx-auto">
-            <div className="flex items-center justify-center mb-4">
-              <div className="flex -space-x-2">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full bg-indigo-300 border-2 border-white"></div>
-                ))}
-                <div className="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center text-xs">
-                  +42
-                </div>
-              </div>
-              <div className="ml-3 text-sm text-white/80">
-                <strong>47 new sellers</strong> started free trials in the last 24 hours
-              </div>
-            </div>
-            
-            <Link href="/app">
-              <Button size="lg" className="w-full sm:w-auto text-xl px-12 py-7 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold mx-auto shadow-lg hover:shadow-xl transition-all">
-                Start Your Free Trial Now
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            
-            <p className="mt-4 text-sm text-indigo-200">
-              No credit card required • 7-day free trial • Cancel anytime
-            </p>
-          </div>
+          <Link href="/app">
+            <Button size="lg" className="mx-auto text-lg px-10 py-6 bg-white text-indigo-700 hover:bg-indigo-50 font-bold shadow-lg hover:shadow-xl transition-all">
+              Start Free Trial
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
           
-          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+          <p className="mt-4 text-sm text-indigo-200">
+            No credit card required • 7-day free trial • Cancel anytime
+          </p>
+          
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 md:gap-12">
             <div className="flex items-center">
               <Shield className="h-5 w-5 text-indigo-300 mr-2" />
-              <span className="text-sm">100% Secure Checkout</span>
+              <span className="text-sm">Secure & Private</span>
             </div>
             <div className="flex items-center">
               <Zap className="h-5 w-5 text-indigo-300 mr-2" />
-              <span className="text-sm">Instant Access</span>
+              <span className="text-sm">Instant Setup</span>
             </div>
             <div className="flex items-center">
               <CheckCircle className="h-5 w-5 text-indigo-300 mr-2" />
-              <span className="text-sm">24/7 Support</span>
+              <span className="text-sm">Expert Support</span>
             </div>
           </div>
         </div>
