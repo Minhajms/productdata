@@ -58,17 +58,34 @@ export function Landing() {
     return () => clearInterval(rotationTimer);
   }, [fomoNotifications.length]);
 
-  // Scroll event listener
+  // Modern scroll event listener for header and animations
   useEffect(() => {
+    // Track scroll position for sticky header
     const handleScroll = () => {
       if (window.scrollY > 50) {
         setScrolled(true);
       } else {
         setScrolled(false);
       }
+      
+      // Handle scroll animations
+      const animatedElements = document.querySelectorAll('.animate-on-scroll');
+      animatedElements.forEach(element => {
+        const elementTop = element.getBoundingClientRect().top;
+        const elementHeight = element.getBoundingClientRect().height;
+        const windowHeight = window.innerHeight;
+        
+        // Add animation when element is in viewport
+        if (elementTop + elementHeight * 0.3 <= windowHeight) {
+          element.classList.add('is-visible');
+        }
+      });
     };
     
-    window.addEventListener('scroll', handleScroll);
+    // Run once on component mount
+    setTimeout(handleScroll, 100);
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -452,7 +469,7 @@ export function Landing() {
       
 
       {/* How It Works section with unique features */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white animate-on-scroll">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="inline-block px-3 py-1 text-xs font-semibold tracking-wider text-indigo-600 uppercase bg-indigo-100 rounded-full mb-4">How It Works</span>
@@ -526,7 +543,7 @@ export function Landing() {
       </section>
 
       {/* Pain points section - Leveraging loss aversion */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-gray-50 animate-on-scroll">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <span className="bg-red-100 text-red-600 text-sm font-semibold px-3 py-1 rounded-full">WARNING</span>
@@ -597,7 +614,7 @@ export function Landing() {
       </section>
 
       {/* Social proof section - Building trust with authentic examples */}
-      <section className="py-20 bg-white relative overflow-hidden">
+      <section className="py-20 bg-white relative overflow-hidden animate-on-scroll">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E\")" }}></div>
@@ -711,7 +728,7 @@ export function Landing() {
       </section>
 
       {/* Solution section with pricing information - Creating clear value perception */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white animate-on-scroll">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="inline-block px-3 py-1 text-xs font-semibold tracking-wider text-indigo-600 uppercase bg-indigo-100 rounded-full mb-4">THE SOLUTION</span>

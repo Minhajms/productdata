@@ -5,6 +5,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Modern smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Subtle animations for sections */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  
+  .animate-on-scroll.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Custom animations for landing page */
 @keyframes bounce-slow {
   0%, 100% {
