@@ -722,12 +722,12 @@ export function Landing() {
           
           <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-16">
             <div className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="p-8 lg:p-12">
-                <div className="flex items-center">
+              <div className="p-6 sm:p-8 lg:p-12">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-0">
                   <span className="bg-indigo-100 text-indigo-600 font-bold text-xs uppercase rounded-full px-3 py-1">
                     Launch Pricing
                   </span>
-                  <div className="ml-3 pl-3 border-l border-gray-300">
+                  <div className="sm:ml-3 sm:pl-3 sm:border-l sm:border-gray-300">
                     <div className="text-sm">
                       <span className="text-green-600 font-semibold">25% off all plans</span>
                     </div>
@@ -741,33 +741,33 @@ export function Landing() {
                   {/* Starter Plan */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="bg-gray-50 p-4 border-b border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                        <div className="mb-2 sm:mb-0">
                           <span className="font-bold text-gray-900 text-lg">Starter</span>
                           <p className="text-gray-500 text-sm mt-1">Perfect for small sellers</p>
                         </div>
-                        <div>
-                          <div className="text-gray-500 text-sm line-through">$19/mo</div>
+                        <div className="flex items-center sm:block">
+                          <div className="text-gray-500 text-sm line-through mr-2 sm:mr-0">$19/mo</div>
                           <div className="font-bold text-gray-900 text-xl">$14/mo</div>
                         </div>
                       </div>
                     </div>
                     <div className="p-4">
                       <ul className="space-y-2 text-sm">
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span><strong>10 product enhancements</strong> per month</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>All marketplace formats</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Standard AI quality</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Email support</span>
                         </li>
                       </ul>
@@ -780,37 +780,37 @@ export function Landing() {
                       POPULAR
                     </div>
                     <div className="bg-indigo-50 p-4 border-b border-indigo-100">
-                      <div className="flex justify-between items-center">
-                        <div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                        <div className="mb-2 sm:mb-0">
                           <span className="font-bold text-gray-900 text-lg">Growth</span>
                           <p className="text-gray-500 text-sm mt-1">Ideal for growing businesses</p>
                         </div>
-                        <div>
-                          <div className="text-gray-500 text-sm line-through">$39/mo</div>
+                        <div className="flex items-center sm:block">
+                          <div className="text-gray-500 text-sm line-through mr-2 sm:mr-0">$39/mo</div>
                           <div className="font-bold text-indigo-600 text-xl">$29/mo</div>
                         </div>
                       </div>
                     </div>
                     <div className="p-4">
                       <ul className="space-y-2 text-sm">
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span><strong>50 product enhancements</strong> per month</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>All marketplace formats</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Premium AI quality</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Priority support</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Bulk CSV processing</span>
                         </li>
                       </ul>
@@ -820,41 +820,41 @@ export function Landing() {
                   {/* Pro Plan */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <div className="bg-gray-50 p-4 border-b border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                        <div className="mb-2 sm:mb-0">
                           <span className="font-bold text-gray-900 text-lg">Pro</span>
                           <p className="text-gray-500 text-sm mt-1">For high-volume sellers</p>
                         </div>
-                        <div>
-                          <div className="text-gray-500 text-sm line-through">$99/mo</div>
+                        <div className="flex items-center sm:block">
+                          <div className="text-gray-500 text-sm line-through mr-2 sm:mr-0">$99/mo</div>
                           <div className="font-bold text-gray-900 text-xl">$74/mo</div>
                         </div>
                       </div>
                     </div>
                     <div className="p-4">
                       <ul className="space-y-2 text-sm">
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span><strong>Unlimited product enhancements</strong></span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>All marketplace formats</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Advanced AI quality</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Dedicated support</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>API access</span>
                         </li>
-                        <li className="flex items-center">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        <li className="flex items-start">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
                           <span>Advanced analytics</span>
                         </li>
                       </ul>
@@ -886,11 +886,11 @@ export function Landing() {
                 </p>
               </div>
               
-              <div className="bg-gray-900 p-8 lg:p-12 text-white">
+              <div className="bg-gray-900 p-6 sm:p-8 lg:p-12 text-white">
                 <h3 className="text-xl font-bold mb-6">Why customers choose us</h3>
                 
                 <div className="space-y-6">
-                  <div className="flex">
+                  <div className="flex items-start">
                     <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center mr-4">
                       <Clock className="h-5 w-5 text-indigo-300" />
                     </div>
@@ -902,7 +902,7 @@ export function Landing() {
                     </div>
                   </div>
                   
-                  <div className="flex">
+                  <div className="flex items-start">
                     <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center mr-4">
                       <TrendingUp className="h-5 w-5 text-indigo-300" />
                     </div>
@@ -914,24 +914,24 @@ export function Landing() {
                     </div>
                   </div>
                   
-                  <div className="flex">
+                  <div className="flex items-start">
                     <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center mr-4">
                       <Shield className="h-5 w-5 text-indigo-300" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-white">Risk-free 7-day trial</h4>
+                      <h4 className="text-lg font-semibold text-white">Risk-free trial</h4>
                       <p className="text-gray-300 mt-1">
-                        Try all premium features for free. No credit card required. Cancel anytime.
+                        Try all premium features for 3 days. No credit card required. Cancel anytime.
                       </p>
                     </div>
                   </div>
                   
                   <div className="mt-8 pt-6 border-t border-gray-700">
-                    <div className="flex items-center">
+                    <div className="flex items-start">
                       <img 
                         src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&h=100" 
                         alt="Customer" 
-                        className="w-12 h-12 rounded-full object-cover border-2 border-indigo-400"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-indigo-400 flex-shrink-0"
                       />
                       <div className="ml-4">
                         <p className="text-sm text-gray-300 italic">
