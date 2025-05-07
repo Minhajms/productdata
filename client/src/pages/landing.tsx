@@ -463,12 +463,31 @@ export function Landing() {
           
           <div className="relative mt-12 max-w-5xl mx-auto px-4 sm:px-6 overflow-hidden rounded-2xl shadow-xl bg-white">
             {/* Demo Slider */}
-            <div className="py-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">Before: Raw Product Data</h3>
-                  <div className="bg-gray-100 p-4 rounded-lg border border-gray-200 text-sm text-gray-700 font-mono overflow-auto max-h-80">
-                    <pre className="whitespace-pre-wrap">
+            <div className="py-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-800 flex items-center">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 mr-3">
+                    <Zap className="h-4 w-4" />
+                  </div>
+                  See the transformation in action
+                </h3>
+                <div className="hidden md:flex items-center bg-indigo-50 rounded-full px-3 py-1 text-xs font-medium text-indigo-700">
+                  <ArrowUp className="h-3 w-3 mr-1" /> 4.7x higher conversion rate
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-stretch">
+                <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow p-5 relative">
+                  <div className="absolute top-0 left-0 bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 rounded-br-lg">
+                    BEFORE
+                  </div>
+                  <div className="pt-6">
+                    <h4 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                      Raw Product Data
+                      <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">Incomplete</span>
+                    </h4>
+                    <div className="bg-white p-4 rounded-lg border border-gray-200 text-sm text-gray-700 font-mono overflow-auto h-64 shadow-inner">
+                      <pre className="whitespace-pre-wrap">
 {`product_id,P1284,
 title,Bluetooth headphones,
 description,Wireless headphones with good sound,
@@ -478,64 +497,87 @@ brand,TechAudio,
 color,black,
 inventory,15,
 `}
-                    </pre>
-                  </div>
-                  <div className="mt-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <AlertCircle className="h-5 w-5 text-red-400" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-red-700">
-                          Missing category, incomplete description, no feature highlights
-                        </p>
-                      </div>
+                      </pre>
                     </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-4">After: Enhanced Listing</h3>
-                  <div className="bg-white p-4 rounded-lg border border-green-200 shadow-sm text-sm text-gray-700 max-h-80 overflow-auto">
-                    <div className="font-semibold text-lg text-gray-900 mb-2">TechAudio Premium Bluetooth 5.0 Headphones - Wireless Over-Ear Headset with HD Sound & 30H Playtime</div>
-                    <div className="font-medium text-green-600 mb-2">$79.99</div>
-                    <p className="text-gray-600 mb-3">
-                      Experience exceptional audio quality with these premium TechAudio wireless headphones. Featuring the latest Bluetooth 5.0 technology for seamless connectivity up to 33ft, these over-ear headphones deliver immersive, high-definition sound with deep bass and crystal-clear highs.
-                    </p>
-                    <div className="mb-4">
-                      <div className="font-medium mb-1">Key Features:</div>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>Premium sound quality with enhanced bass response</li>
-                        <li>30-hour battery life on a single charge</li>
-                        <li>Ultra-comfortable memory foam ear cushions</li>
-                        <li>Built-in microphone for calls and voice assistant</li>
-                        <li>Foldable design with included carrying case</li>
-                      </ul>
-                    </div>
-                    <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                    <div className="mt-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
                       <div className="flex">
                         <div className="flex-shrink-0">
-                          <CheckCircle className="h-5 w-5 text-green-400" />
+                          <AlertCircle className="h-5 w-5 text-red-400" />
                         </div>
                         <div className="ml-3">
-                          <p className="text-sm text-green-700">
-                            Category added: Electronics &gt; Audio &gt; Headphones
+                          <p className="text-sm text-red-700">
+                            Missing category, incomplete description, no feature highlights
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+                
+                <div className="bg-gradient-to-br from-white to-green-50 rounded-xl border border-green-100 overflow-hidden shadow-md p-5 relative">
+                  <div className="absolute top-0 left-0 bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-br-lg">
+                    AFTER
+                  </div>
+                  <div className="pt-6">
+                    <h4 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                      AI-Enhanced Listing
+                      <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">Marketplace-Ready</span>
+                    </h4>
+                    <div className="bg-white p-5 rounded-lg border border-green-200 shadow-sm text-sm text-gray-700 h-64 overflow-auto">
+                      <div className="font-semibold text-lg text-gray-900 mb-2 border-b pb-2">TechAudio Premium Bluetooth 5.0 Headphones - Wireless Over-Ear Headset with HD Sound & 30H Playtime</div>
+                      <div className="font-medium text-green-600 mb-2">$79.99</div>
+                      <p className="text-gray-600 mb-3">
+                        Experience exceptional audio quality with these premium TechAudio wireless headphones. Featuring the latest Bluetooth 5.0 technology for seamless connectivity up to 33ft, these over-ear headphones deliver immersive, high-definition sound with deep bass and crystal-clear highs.
+                      </p>
+                      <div className="mb-4">
+                        <div className="font-medium mb-1">Key Features:</div>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Premium sound quality with enhanced bass response</li>
+                          <li>30-hour battery life on a single charge</li>
+                          <li>Ultra-comfortable memory foam ear cushions</li>
+                          <li>Built-in microphone for calls and voice assistant</li>
+                          <li>Foldable design with included carrying case</li>
+                        </ul>
+                      </div>
+                      <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <CheckCircle className="h-5 w-5 text-green-400" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-green-700">
+                              Category added: Electronics &gt; Audio &gt; Headphones
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              
-              <div className="mt-8 flex justify-center space-x-2">
-                <span className="w-3 h-3 bg-indigo-600 rounded-full"></span>
-                <span className="w-3 h-3 bg-gray-300 rounded-full"></span>
-                <span className="w-3 h-3 bg-gray-300 rounded-full"></span>
+
+              <div className="mt-8 flex flex-col items-center">
+                <div className="flex justify-center space-x-3 mb-4">
+                  <button className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors">
+                    <span className="sr-only">Product 1</span>
+                    <span>1</span>
+                  </button>
+                  <button className="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                    <span className="sr-only">Product 2</span>
+                    <span>2</span>
+                  </button>
+                  <button className="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                    <span className="sr-only">Product 3</span>
+                    <span>3</span>
+                  </button>
+                </div>
+                <Link href="/app" className="inline-flex items-center text-indigo-600 font-medium hover:text-indigo-700">
+                  See more examples <ChevronRight className="h-4 w-4 ml-1" />
+                </Link>
               </div>
             </div>
             
-            <div className="absolute top-4 right-4">
+            <div className="absolute bottom-4 right-4 md:hidden">
               <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
                 <ArrowUp className="h-3 w-3 mr-1" /> 4.7x higher conversion rate
               </span>
