@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle, TrendingUp, Layers, Zap, Clock, Shield, Star, ChevronRight } from "lucide-react";
+import { ArrowRight, CheckCircle, TrendingUp, Layers, Zap, Clock, Shield, Star, ChevronRight, AlertCircle, ArrowUp } from "lucide-react";
 import { Link } from "wouter";
 import { useState, useEffect } from "react";
 
@@ -445,6 +445,100 @@ export function Landing() {
             </div>
             <div className="h-8 flex items-center">
               <span className="text-2xl font-bold text-gray-400">Etsy</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Results Demo Section */}
+      <section className="py-20 bg-gradient-to-br from-indigo-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <span className="inline-block px-3 py-1 text-xs font-semibold tracking-wider text-indigo-600 uppercase bg-indigo-100 rounded-full mb-4">See It In Action</span>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Real Results from Our Platform</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Here's how our AI transforms incomplete product data into optimized marketplace listings
+            </p>
+          </div>
+          
+          <div className="relative mt-12 max-w-5xl mx-auto px-4 sm:px-6 overflow-hidden rounded-2xl shadow-xl bg-white">
+            {/* Demo Slider */}
+            <div className="py-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">Before: Raw Product Data</h3>
+                  <div className="bg-gray-100 p-4 rounded-lg border border-gray-200 text-sm text-gray-700 font-mono overflow-auto max-h-80">
+                    <pre className="whitespace-pre-wrap">
+{`product_id,P1284,
+title,Bluetooth headphones,
+description,Wireless headphones with good sound,
+price,79.99,
+category,,
+brand,TechAudio,
+color,black,
+inventory,15,
+`}
+                    </pre>
+                  </div>
+                  <div className="mt-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <AlertCircle className="h-5 w-5 text-red-400" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-red-700">
+                          Missing category, incomplete description, no feature highlights
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">After: Enhanced Listing</h3>
+                  <div className="bg-white p-4 rounded-lg border border-green-200 shadow-sm text-sm text-gray-700 max-h-80 overflow-auto">
+                    <div className="font-semibold text-lg text-gray-900 mb-2">TechAudio Premium Bluetooth 5.0 Headphones - Wireless Over-Ear Headset with HD Sound & 30H Playtime</div>
+                    <div className="font-medium text-green-600 mb-2">$79.99</div>
+                    <p className="text-gray-600 mb-3">
+                      Experience exceptional audio quality with these premium TechAudio wireless headphones. Featuring the latest Bluetooth 5.0 technology for seamless connectivity up to 33ft, these over-ear headphones deliver immersive, high-definition sound with deep bass and crystal-clear highs.
+                    </p>
+                    <div className="mb-4">
+                      <div className="font-medium mb-1">Key Features:</div>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Premium sound quality with enhanced bass response</li>
+                        <li>30-hour battery life on a single charge</li>
+                        <li>Ultra-comfortable memory foam ear cushions</li>
+                        <li>Built-in microphone for calls and voice assistant</li>
+                        <li>Foldable design with included carrying case</li>
+                      </ul>
+                    </div>
+                    <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <CheckCircle className="h-5 w-5 text-green-400" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-green-700">
+                            Category added: Electronics &gt; Audio &gt; Headphones
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-center space-x-2">
+                <span className="w-3 h-3 bg-indigo-600 rounded-full"></span>
+                <span className="w-3 h-3 bg-gray-300 rounded-full"></span>
+                <span className="w-3 h-3 bg-gray-300 rounded-full"></span>
+              </div>
+            </div>
+            
+            <div className="absolute top-4 right-4">
+              <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                <ArrowUp className="h-3 w-3 mr-1" /> 4.7x higher conversion rate
+              </span>
             </div>
           </div>
         </div>
