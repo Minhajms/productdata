@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle, TrendingUp, Layers, Zap, Clock, Shield, Star, ChevronRight, AlertCircle, ArrowUp } from "lucide-react";
 import { Link } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useScrollAnimation, useParallaxEffect } from "@/hooks/use-scroll-animation";
 
 export function Landing() {
   const [videoModalOpen, setVideoModalOpen] = useState(false);
@@ -58,7 +59,35 @@ export function Landing() {
     return () => clearInterval(rotationTimer);
   }, [fomoNotifications.length]);
 
-  // Modern scroll event listener for header and animations
+  // Modern scroll animation hooks
+  const heroImageRef = useParallaxEffect<HTMLDivElement>({ speed: 0.1, direction: "down" });
+  
+  // Header background effects
+  const bgShapeRef1 = useParallaxEffect<HTMLDivElement>({ speed: 0.07, direction: "right" });
+  const bgShapeRef2 = useParallaxEffect<HTMLDivElement>({ speed: 0.05, direction: "left" });
+  
+  // Hero section animated elements
+  const heroHeadingRef = useScrollAnimation<HTMLHeadingElement>({ 
+    threshold: 0.1, 
+    animationClass: 'visible',
+    rootMargin: '-50px 0px'
+  });
+  
+  const heroTextRef = useScrollAnimation<HTMLParagraphElement>({ 
+    threshold: 0.1,
+    animationClass: 'visible',
+    rootMargin: '-50px 0px',
+    triggerOnce: true
+  });
+  
+  const ctaButtonRef = useScrollAnimation<HTMLDivElement>({ 
+    threshold: 0.1, 
+    animationClass: 'visible',
+    rootMargin: '-50px 0px',
+    triggerOnce: true
+  });
+
+  // Setup intersection observer for all animations
   useEffect(() => {
     // Track scroll position for sticky header
     const handleScroll = () => {
@@ -68,7 +97,8 @@ export function Landing() {
         setScrolled(false);
       }
       
-      // Handle scroll animations
+      // Handle legacy scroll animations - we'll keep this for backward compatibility
+      // but the modern effects use the hooks above
       const animatedElements = document.querySelectorAll('.animate-on-scroll');
       animatedElements.forEach(element => {
         const elementTop = element.getBoundingClientRect().top;
@@ -78,6 +108,19 @@ export function Landing() {
         // Add animation when element is in viewport
         if (elementTop + elementHeight * 0.3 <= windowHeight) {
           element.classList.add('is-visible');
+        }
+      });
+      
+      // Modern animation classes
+      const fadeElements = document.querySelectorAll('.fade-up, .fade-in, .scale-up, .slide-left, .slide-right, .blur-in');
+      fadeElements.forEach(element => {
+        const rect = element.getBoundingClientRect();
+        const isInView = rect.top <= window.innerHeight * 0.85 && rect.bottom >= 0;
+        
+        if (isInView) {
+          element.classList.add('visible');
+        } else if (!element.classList.contains('once')) {
+          element.classList.remove('visible');
         }
       });
     };
@@ -154,10 +197,10 @@ export function Landing() {
 
       {/* Hero Section - Using attention-grabbing power words and visual hierarchy */}
       <section className="bg-gradient-to-r from-blue-600 to-indigo-700 pt-16 pb-24 relative overflow-hidden">
-        {/* Abstract shapes for visual interest */}
+        {/* Abstract shapes for visual interest with parallax effect */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-          <div className="absolute top-0 right-0 bg-white/10 w-96 h-96 rounded-full -mt-20 -mr-20"></div>
-          <div className="absolute bottom-0 left-0 bg-white/5 w-64 h-64 rounded-full -mb-10 -ml-10"></div>
+          <div ref={bgShapeRef1.ref} className="absolute top-0 right-0 bg-white/10 w-96 h-96 rounded-full -mt-20 -mr-20 parallax"></div>
+          <div ref={bgShapeRef2.ref} className="absolute bottom-0 left-0 bg-white/5 w-64 h-64 rounded-full -mb-10 -ml-10 parallax"></div>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

@@ -5,22 +5,139 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Modern smooth scrolling */
+/* Modern smooth scrolling with advanced effects */
 html {
   scroll-behavior: smooth;
 }
 
-/* Subtle animations for sections */
+/* Base animation classes for scroll triggers */
 @media (prefers-reduced-motion: no-preference) {
-  .animate-on-scroll {
+  /* Fade up animation - the base animation */
+  .fade-up {
     opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1), 
+                transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
   }
   
-  .animate-on-scroll.is-visible {
+  .fade-up.visible {
     opacity: 1;
     transform: translateY(0);
+  }
+  
+  /* Fade in animation */
+  .fade-in {
+    opacity: 0;
+    transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  
+  .fade-in.visible {
+    opacity: 1;
+  }
+  
+  /* Scale up animation */
+  .scale-up {
+    opacity: 0;
+    transform: scale(0.94);
+    transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1), 
+                transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  
+  .scale-up.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+  
+  /* Slide in from left */
+  .slide-left {
+    opacity: 0;
+    transform: translateX(-50px);
+    transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1), 
+                transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  
+  .slide-left.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  /* Slide in from right */
+  .slide-right {
+    opacity: 0;
+    transform: translateX(50px);
+    transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1), 
+                transform 0.8s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  
+  .slide-right.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  /* Blur in animation */
+  .blur-in {
+    opacity: 0;
+    filter: blur(10px);
+    transition: opacity 0.8s cubic-bezier(0.33, 1, 0.68, 1),
+                filter.8s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  
+  .blur-in.visible {
+    opacity: 1;
+    filter: blur(0);
+  }
+  
+  /* Parallax effect */
+  .parallax {
+    transition: transform 0.5s cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  
+  /* Staggered animation - These delay classes are used with the other animation classes */
+  .delay-100 {
+    transition-delay: 0.1s;
+  }
+  
+  .delay-200 {
+    transition-delay: 0.2s;
+  }
+  
+  .delay-300 {
+    transition-delay: 0.3s;
+  }
+  
+  .delay-400 {
+    transition-delay: 0.4s;
+  }
+  
+  .delay-500 {
+    transition-delay: 0.5s;
+  }
+  
+  /* Alternate scroll animation speeds */
+  .duration-slow {
+    transition-duration: 1.2s;
+  }
+  
+  .duration-fast {
+    transition-duration: 0.5s;
+  }
+  
+  /* Horizontal scroll sections */
+  .horizontal-scroll-container {
+    overflow-x: hidden;
+    overflow-y: hidden;
+    white-space: nowrap;
+    position: relative;
+    cursor: grab;
+  }
+  
+  .horizontal-scroll-container:active {
+    cursor: grabbing;
+  }
+  
+  .horizontal-scroll-content {
+    display: inline-flex;
+    transition: transform 0.5s ease;
   }
 }
 
