@@ -230,23 +230,23 @@ export function Landing() {
               </div>
               
               {/* Example container with marketplace style */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg transform rotate-1"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg transform rotate-1 hidden sm:block"></div>
               <div className="relative bg-white rounded-lg shadow-xl overflow-hidden">
                 <div className="flex flex-col">
                   {/* Amazon-style listing comparison */}
                   {activeTab === 'amazon' && (
                     <>
-                      <div className="px-4 py-3 bg-gray-800 text-white text-sm flex justify-between">
+                      <div className="px-4 py-3 bg-gray-800 text-white text-xs sm:text-sm flex justify-between">
                         <span>amazon.com</span>
-                        <span>Product Listing</span>
+                        <span className="hidden sm:inline">Product Listing</span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="p-4 bg-white border-r border-gray-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-1">
+                        <div className="p-3 sm:p-4 bg-white sm:border-r sm:border-gray-200">
                           <div className="text-center mb-3">
                             <div className="text-xs font-semibold uppercase text-gray-500 bg-gray-100 rounded-full px-2 py-1 inline-block">Before</div>
                           </div>
-                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.amazon.before.title}</div>
+                          <div className="mb-2 text-gray-800 text-xs sm:text-sm font-medium line-clamp-2">{marketplaceExamples.amazon.before.title}</div>
                           <div className="flex items-center mb-2">
                             <div className="flex mr-2">
                               {[...Array(3)].map((_, i) => (
@@ -260,8 +260,8 @@ export function Landing() {
                           </div>
                           <div className="text-xs mb-3 text-red-600 font-medium">$149.99</div>
                           <div className="h-[1px] bg-gray-200 my-2"></div>
-                          <div className="text-xs text-gray-600 mb-2">{marketplaceExamples.amazon.before.description}</div>
-                          <ul className="text-xs text-gray-600 space-y-1 pl-3 mb-4">
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.amazon.before.description}</div>
+                          <ul className="text-xs text-gray-600 space-y-1 pl-3 mb-4 max-h-16 sm:max-h-20 overflow-hidden">
                             {marketplaceExamples.amazon.before.bullets.map((bullet, i) => (
                               <li key={i} className="list-disc list-outside">{bullet}</li>
                             ))}
@@ -273,11 +273,11 @@ export function Landing() {
                           </div>
                         </div>
 
-                        <div className="p-4 bg-gray-50">
+                        <div className="p-3 sm:p-4 bg-gray-50 border-t sm:border-t-0 border-gray-200 sm:border-0">
                           <div className="text-center mb-3">
                             <div className="text-xs font-semibold uppercase text-white bg-green-600 rounded-full px-2 py-1 inline-block">AI Enhanced</div>
                           </div>
-                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.amazon.after.title}</div>
+                          <div className="mb-2 text-gray-800 text-xs sm:text-sm font-medium line-clamp-2">{marketplaceExamples.amazon.after.title}</div>
                           <div className="flex items-center mb-2">
                             <div className="flex mr-2">
                               {[...Array(5)].map((_, i) => (
@@ -288,8 +288,8 @@ export function Landing() {
                           </div>
                           <div className="text-xs mb-3 text-red-600 font-medium">$149.99</div>
                           <div className="h-[1px] bg-gray-200 my-2"></div>
-                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{marketplaceExamples.amazon.after.description}</div>
-                          <ul className="text-xs text-gray-600 space-y-1 pl-3 mb-4 max-h-24 overflow-hidden">
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.amazon.after.description}</div>
+                          <ul className="text-xs text-gray-600 space-y-1 pl-3 mb-4 max-h-16 sm:max-h-20 overflow-hidden">
                             {marketplaceExamples.amazon.after.bullets.map((bullet, i) => (
                               <li key={i} className="list-disc list-outside">{bullet}</li>
                             ))}
@@ -307,24 +307,24 @@ export function Landing() {
                   {/* eBay-style listing comparison */}
                   {activeTab === 'ebay' && (
                     <>
-                      <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-green-400 text-white text-sm flex justify-between">
+                      <div className="px-4 py-3 bg-gradient-to-r from-blue-500 to-green-400 text-white text-xs sm:text-sm flex justify-between">
                         <span>ebay.com</span>
-                        <span>Product Listing</span>
+                        <span className="hidden sm:inline">Product Listing</span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="p-4 bg-white border-r border-gray-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-1">
+                        <div className="p-3 sm:p-4 bg-white sm:border-r sm:border-gray-200">
                           <div className="text-center mb-3">
                             <div className="text-xs font-semibold uppercase text-gray-500 bg-gray-100 rounded-full px-2 py-1 inline-block">Before</div>
                           </div>
-                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.ebay.before.title}</div>
+                          <div className="mb-2 text-gray-800 text-xs sm:text-sm font-medium line-clamp-2">{marketplaceExamples.ebay.before.title}</div>
                           <div className="text-xs mb-3 text-green-600 font-medium">$189.99 <span className="line-through text-gray-400 ml-1">$249.99</span></div>
                           <div className="bg-blue-50 text-blue-700 text-xs px-2 py-1 mb-3 rounded inline-block">Buy It Now</div>
                           <div className="h-[1px] bg-gray-200 my-2"></div>
-                          <div className="text-xs text-gray-600 mb-2">{marketplaceExamples.ebay.before.description}</div>
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.ebay.before.description}</div>
                           <div className="text-xs mb-4">
                             <span className="font-medium text-gray-700">Highlights: </span>
-                            <span className="text-gray-600">{marketplaceExamples.ebay.before.highlights}</span>
+                            <span className="text-gray-600 line-clamp-2">{marketplaceExamples.ebay.before.highlights}</span>
                           </div>
                           <div className="mt-auto text-center">
                             <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full inline-block">
@@ -333,18 +333,18 @@ export function Landing() {
                           </div>
                         </div>
 
-                        <div className="p-4 bg-gray-50">
+                        <div className="p-3 sm:p-4 bg-gray-50 border-t sm:border-t-0 border-gray-200 sm:border-0">
                           <div className="text-center mb-3">
                             <div className="text-xs font-semibold uppercase text-white bg-green-600 rounded-full px-2 py-1 inline-block">AI Enhanced</div>
                           </div>
-                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.ebay.after.title}</div>
+                          <div className="mb-2 text-gray-800 text-xs sm:text-sm font-medium line-clamp-2">{marketplaceExamples.ebay.after.title}</div>
                           <div className="text-xs mb-3 text-green-600 font-medium">$189.99 <span className="line-through text-gray-400 ml-1">$249.99</span></div>
                           <div className="bg-blue-50 text-blue-700 text-xs px-2 py-1 mb-3 rounded inline-block">Buy It Now</div>
                           <div className="h-[1px] bg-gray-200 my-2"></div>
-                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{marketplaceExamples.ebay.after.description}</div>
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.ebay.after.description}</div>
                           <div className="text-xs mb-4">
                             <span className="font-medium text-gray-700">Highlights: </span>
-                            <span className="text-gray-600 line-clamp-3">{marketplaceExamples.ebay.after.highlights}</span>
+                            <span className="text-gray-600 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.ebay.after.highlights}</span>
                           </div>
                           <div className="mt-auto text-center">
                             <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full inline-block">
@@ -359,23 +359,23 @@ export function Landing() {
                   {/* Shopify-style listing comparison */}
                   {activeTab === 'shopify' && (
                     <>
-                      <div className="px-4 py-3 bg-gray-900 text-white text-sm flex justify-between">
+                      <div className="px-4 py-3 bg-gray-900 text-white text-xs sm:text-sm flex justify-between">
                         <span>myshopifystore.com</span>
-                        <span>Product Listing</span>
+                        <span className="hidden sm:inline">Product Listing</span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="p-4 bg-white border-r border-gray-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-1">
+                        <div className="p-3 sm:p-4 bg-white sm:border-r sm:border-gray-200">
                           <div className="text-center mb-3">
                             <div className="text-xs font-semibold uppercase text-gray-500 bg-gray-100 rounded-full px-2 py-1 inline-block">Before</div>
                           </div>
-                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.shopify.before.title}</div>
+                          <div className="mb-2 text-gray-800 text-xs sm:text-sm font-medium line-clamp-2">{marketplaceExamples.shopify.before.title}</div>
                           <div className="text-xs mb-3 text-gray-900 font-medium">$49.95</div>
                           <div className="h-[1px] bg-gray-200 my-2"></div>
-                          <div className="text-xs text-gray-600 mb-2">{marketplaceExamples.shopify.before.description}</div>
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.shopify.before.description}</div>
                           <div className="text-xs mb-4">
                             <span className="font-medium text-gray-700">Details: </span> 
-                            <span className="text-gray-600">{marketplaceExamples.shopify.before.details}</span>
+                            <span className="text-gray-600 line-clamp-2">{marketplaceExamples.shopify.before.details}</span>
                           </div>
                           <div className="mt-auto text-center">
                             <div className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full inline-block">
@@ -384,17 +384,17 @@ export function Landing() {
                           </div>
                         </div>
 
-                        <div className="p-4 bg-gray-50">
+                        <div className="p-3 sm:p-4 bg-gray-50 border-t sm:border-t-0 border-gray-200 sm:border-0">
                           <div className="text-center mb-3">
                             <div className="text-xs font-semibold uppercase text-white bg-green-600 rounded-full px-2 py-1 inline-block">AI Enhanced</div>
                           </div>
-                          <div className="mb-2 text-gray-800 text-sm font-medium">{marketplaceExamples.shopify.after.title}</div>
+                          <div className="mb-2 text-gray-800 text-xs sm:text-sm font-medium line-clamp-2">{marketplaceExamples.shopify.after.title}</div>
                           <div className="text-xs mb-3 text-gray-900 font-medium">$49.95</div>
                           <div className="h-[1px] bg-gray-200 my-2"></div>
-                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{marketplaceExamples.shopify.after.description}</div>
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.shopify.after.description}</div>
                           <div className="text-xs mb-4">
                             <span className="font-medium text-gray-700">Details: </span>
-                            <span className="text-gray-600 line-clamp-3">{marketplaceExamples.shopify.after.details}</span>
+                            <span className="text-gray-600 line-clamp-2 sm:line-clamp-3">{marketplaceExamples.shopify.after.details}</span>
                           </div>
                           <div className="mt-auto text-center">
                             <div className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full inline-block">
@@ -413,10 +413,10 @@ export function Landing() {
               </div>
               
               {/* Floating stats to reinforce value */}
-              <div className="absolute -bottom-6 -left-6 bg-yellow-400 rounded-lg px-4 py-2 text-gray-900 font-medium text-sm shadow-lg animate-bounce-slow">
+              <div className="absolute -bottom-3 sm:-bottom-6 -left-2 sm:-left-6 bg-yellow-400 rounded-lg px-3 py-1 sm:px-4 sm:py-2 text-gray-900 font-medium text-xs sm:text-sm shadow-lg animate-bounce-slow">
                 ⚡ Ready in 2 minutes
               </div>
-              <div className="absolute -top-6 -right-6 bg-indigo-800 text-white rounded-lg px-4 py-2 font-medium text-sm shadow-lg">
+              <div className="absolute -top-3 sm:-top-6 -right-2 sm:-right-6 bg-indigo-800 text-white rounded-lg px-3 py-1 sm:px-4 sm:py-2 font-medium text-xs sm:text-sm shadow-lg">
                 📈 45% higher CTR
               </div>
             </div>
