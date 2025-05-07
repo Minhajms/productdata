@@ -211,8 +211,8 @@ export function Landing() {
                 AI-POWERED • NEW TECHNOLOGY • LIMITED ACCESS
               </div>
               
-              {/* Primary headline with clearly identified pain point and solution */}
-              <h1 className="text-4xl md:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6">
+              {/* Primary headline with clearly identified pain point and solution - with slide-in animation */}
+              <h1 ref={heroHeadingRef.ref} className="text-4xl md:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6 fade-up">
                 <span className="block mb-2">Stop Losing Sales</span>
                 <span className="relative">
                   <span className="z-10 relative">
@@ -222,13 +222,13 @@ export function Landing() {
                 </span>
               </h1>
               
-              {/* Clear value proposition with specific benefits */}
-              <p className="text-xl text-blue-100 mb-8 max-w-xl mx-auto lg:mx-0">
+              {/* Clear value proposition with specific benefits - with fade-in animation */}
+              <p ref={heroTextRef.ref} className="text-xl text-blue-100 mb-8 max-w-xl mx-auto lg:mx-0 fade-up delay-200">
                 Our AI instantly enhances your marketplace listings with SEO-optimized titles, compelling descriptions and high-converting features in <span className="font-bold text-white">under 2 minutes</span>.
               </p>
               
-              {/* Urgency-triggering CTA */}
-              <div className="flex flex-col sm:flex-row justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-4">
+              {/* Urgency-triggering CTA with animation */}
+              <div ref={ctaButtonRef.ref} className="flex flex-col sm:flex-row justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-4 fade-up delay-300">
                 <Link href="/app">
                   <Button size="lg" className="w-full sm:w-auto text-base px-8 py-6 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold relative shadow-lg hover:shadow-xl transition-all group">
                     Transform Your Products Now 
@@ -266,7 +266,7 @@ export function Landing() {
             </div>
 
             {/* Visual transformation with concrete examples */}
-            <div className="relative mx-auto lg:mx-0 max-w-md">
+            <div ref={heroImageRef.ref} className="relative mx-auto lg:mx-0 max-w-md fade-up delay-400">
               {/* Tab selection for different marketplace examples */}
               <div className="bg-white/10 rounded-t-lg p-1 flex justify-center space-x-1 mb-1">
                 <button 
@@ -289,9 +289,9 @@ export function Landing() {
                 </button>
               </div>
               
-              {/* Example container with marketplace style */}
+              {/* Example container with marketplace style - with parallax effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg transform rotate-1 hidden sm:block"></div>
-              <div className="relative bg-white rounded-lg shadow-xl overflow-hidden">
+              <div className="relative bg-white rounded-lg shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300">
                 <div className="flex flex-col">
                   {/* Amazon-style listing comparison */}
                   {activeTab === 'amazon' && (
