@@ -1,16 +1,17 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { parseCSV, generateCSV } from "./services/csv-service";
 import { enhanceProductData } from "./services/gemini-service";
+import { enhanceProductDataWithOpenAI } from "./services/openai-service";
 import { Product } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Upload CSV file
-  app.post("/api/upload", upload.single("file"), async (req, res) => {
+  app.post("/api/upload", upload.single("file"), async (req: Request & { file?: any }, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -35,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhance product data with Gemini API
+  // Enhance product data with OpenAI or Gemini API
   app.post("/api/enhance", async (req, res) => {
     try {
       const { products, marketplace } = req.body;
@@ -44,8 +45,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No valid products provided" });
       }
       
-      // Enhance products
-      const enhancedProducts = await enhanceProductData(products, marketplace);
+      // Determine which API to use
+      let enhancedProducts;
+      const openaiKey = process.env.OPENAI_API_KEY;
+      const geminiKey = process.env.GEMINI_API_KEY;
+      
+      // Try to use OpenAI first, fall back to Gemini if OpenAI fails
+      if (openaiKey) {
+        try {
+          console.log("Using OpenAI API for product enhancement");
+          enhancedProducts = await enhanceProductDataWithOpenAI(products, marketplace);
+        } catch (openaiError) {
+          console.error("OpenAI API error:", openaiError);
+          
+          // If Gemini key exists, try that as fallback
+          if (geminiKey) {
+            console.log("Falling back to Gemini API");
+            enhancedProducts = await enhanceProductData(products, marketplace);
+          } else {
+            throw new Error("OpenAI enhancement failed and no Gemini API key available");
+          }
+        }
+      } else if (geminiKey) {
+        // No OpenAI key, try Gemini
+        console.log("Using Gemini API for product enhancement");
+        enhancedProducts = await enhanceProductData(products, marketplace);
+      } else {
+        // No API keys available
+        throw new Error("No API keys available for product enhancement");
+      }
       
       // Save enhanced products
       await storage.updateProducts(enhancedProducts);
@@ -83,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.saveExportHistory({
         marketplace,
         format,
-        productCount: products.length,
+        product_count: products.length,
         timestamp: new Date()
       });
     } catch (error) {
