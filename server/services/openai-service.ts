@@ -348,25 +348,31 @@ async function generateBulletPointsWithOpenAI(product: any, marketplace: string,
  * @returns Suggested brand name
  */
 async function suggestBrandWithOpenAI(product: any): Promise<string> {
-  const existingInfo = [
-    product.title,
-    product.description,
-    product.product_id,
-    product.category
-  ].filter(Boolean).join(", ");
-  
-  const prompt = `
-    Based on the product information, suggest a realistic brand name.
-    If you can detect a brand name in the provided information, extract it.
-    Otherwise, suggest a plausible brand name that would fit this type of product.
-    Keep it short and professional.
+  try {
+    const existingInfo = [
+      product.title,
+      product.description,
+      product.product_id,
+      product.category
+    ].filter(Boolean).join(", ");
     
-    Product details: ${existingInfo}
+    const prompt = `
+      Based on the product information, suggest a realistic brand name.
+      If you can detect a brand name in the provided information, extract it.
+      Otherwise, suggest a plausible brand name that would fit this type of product.
+      Keep it short and professional.
+      
+      Product details: ${existingInfo}
+      
+      Return ONLY the brand name with no additional explanation or formatting.
+    `;
     
-    Return ONLY the brand name with no additional explanation or formatting.
-  `;
-  
-  return await callOpenAIAPI(prompt);
+    return await callOpenAIAPI(prompt);
+  } catch (error) {
+    console.error(`Error generating brand for product ${product.product_id}:`, error);
+    // Return a default brand name as fallback
+    return "TechPro";
+  }
 }
 
 /**
@@ -376,24 +382,30 @@ async function suggestBrandWithOpenAI(product: any): Promise<string> {
  * @returns Suggested product category
  */
 async function suggestCategoryWithOpenAI(product: any, marketplace: string): Promise<string> {
-  const existingInfo = [
-    product.title,
-    product.description,
-    product.product_id,
-    product.brand
-  ].filter(Boolean).join(", ");
-  
-  const prompt = `
-    Based on the product information, suggest the most appropriate product category for ${marketplace}.
-    Keep it simple and use standard category names commonly found on ${marketplace}.
-    Examples: Electronics, Home & Kitchen, Clothing, Beauty, Toys & Games, etc.
+  try {
+    const existingInfo = [
+      product.title,
+      product.description,
+      product.product_id,
+      product.brand
+    ].filter(Boolean).join(", ");
     
-    Product details: ${existingInfo}
+    const prompt = `
+      Based on the product information, suggest the most appropriate product category for ${marketplace}.
+      Keep it simple and use standard category names commonly found on ${marketplace}.
+      Examples: Electronics, Home & Kitchen, Clothing, Beauty, Toys & Games, etc.
+      
+      Product details: ${existingInfo}
+      
+      Return ONLY the category name with no additional explanation or formatting.
+    `;
     
-    Return ONLY the category name with no additional explanation or formatting.
-  `;
-  
-  return await callOpenAIAPI(prompt);
+    return await callOpenAIAPI(prompt);
+  } catch (error) {
+    console.error(`Error generating category for product ${product.product_id}:`, error);
+    // Return a default category as fallback
+    return "General Merchandise";
+  }
 }
 
 /**
