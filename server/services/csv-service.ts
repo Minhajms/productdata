@@ -2,7 +2,7 @@ import Papa from 'papaparse';
 import { Product } from '@shared/schema';
 
 /**
- * Parses CSV string into an array of product objects
+ * Parses CSV string into an array of product objects with intelligent field detection
  * @param csvString CSV content as a string
  * @returns Array of product objects
  */
@@ -13,36 +13,24 @@ export async function parseCSV(csvString: string): Promise<Product[]> {
       skipEmptyLines: true,
       complete: (results) => {
         try {
+          // Analyze CSV structure first to better understand the data
+          const csvStructure = analyzeCSVStructure(results.data);
+          console.log("CSV Analysis:", JSON.stringify(csvStructure, null, 2));
+          
           const products: Product[] = [];
           
           for (const row of results.data) {
             if (typeof row !== 'object' || row === null) continue;
             
             const product: Product = {
-              product_id: (row as any).product_id || generateRandomId(),
+              product_id: extractProductId(row) || generateRandomId(),
               status: 'pending',
               created_at: new Date(),
               updated_at: new Date()
             };
             
-            // Map CSV columns to product fields
-            for (const [key, value] of Object.entries(row)) {
-              if (value === undefined || value === null || value === '') continue;
-              
-              const normalizedKey = key.toLowerCase().trim().replace(/\s+/g, '_');
-              
-              // Handle special fields
-              if (normalizedKey === 'price') {
-                product.price = parseFloat(value as string) || undefined;
-              } else if (normalizedKey === 'images') {
-                product.images = (value as string).split(';').map(img => img.trim());
-              } else if (normalizedKey === 'bullet_points') {
-                product.bullet_points = (value as string).split(';').map(point => point.trim());
-              } else if (Object.prototype.hasOwnProperty.call(product, normalizedKey)) {
-                // Only set known properties
-                (product as any)[normalizedKey] = value;
-              }
-            }
+            // Map CSV columns to product fields using intelligent mapping
+            mapCSVRowToProduct(row, product, csvStructure);
             
             products.push(product);
           }
@@ -57,6 +45,235 @@ export async function parseCSV(csvString: string): Promise<Product[]> {
       }
     });
   });
+}
+
+/**
+ * Extracts a product ID from a CSV row, looking at various possible column names
+ * @param row A row from the CSV data
+ * @returns Product ID if found, or undefined
+ */
+function extractProductId(row: any): string | undefined {
+  // Check various possible column names for product ID
+  const idColumns = [
+    'product_id', 'productid', 'id', 'sku', 'item_id', 'itemid',
+    'product_code', 'productcode', 'asin', 'upc', 'ean', 'isbn',
+    'part_number', 'partnumber', 'mpn', 'model_number', 'modelnumber'
+  ];
+  
+  // Also check for capitalized and spaced versions
+  const capitalizedIdColumns = idColumns.map(col => 
+    col.charAt(0).toUpperCase() + col.slice(1)
+  );
+  const spacedIdColumns = idColumns.map(col => 
+    col.replace(/_/g, ' ')
+  );
+  const capitalizedSpacedIdColumns = spacedIdColumns.map(col => 
+    col.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  );
+  
+  // Complete list of possible ID column names
+  const allPossibleIdColumns = [
+    ...idColumns, 
+    ...capitalizedIdColumns, 
+    ...spacedIdColumns,
+    ...capitalizedSpacedIdColumns
+  ];
+  
+  // Check each possible column name
+  for (const column of allPossibleIdColumns) {
+    if (row[column] && typeof row[column] === 'string' && row[column].trim() !== '') {
+      return row[column].trim();
+    }
+  }
+  
+  return undefined;
+}
+
+/**
+ * Analyzes CSV structure to understand data formats and column patterns
+ * @param data The parsed CSV data
+ * @returns Analysis of the CSV structure
+ */
+function analyzeCSVStructure(data: any[]): any {
+  if (!data || data.length === 0) {
+    return { columnCount: 0, columns: {}, rowCount: 0 };
+  }
+  
+  // Get the first row to determine columns
+  const firstRow = data[0];
+  const columns: Record<string, { 
+    type: string, 
+    nonEmptyCount: number,
+    valueExamples: string[],
+    possibleMappings: string[]
+  }> = {};
+  
+  // Analyze column names and guess their purpose
+  for (const key of Object.keys(firstRow)) {
+    columns[key] = {
+      type: 'unknown',
+      nonEmptyCount: 0,
+      valueExamples: [],
+      possibleMappings: []
+    };
+  }
+  
+  // Analyze all rows to determine column types and non-empty counts
+  for (const row of data) {
+    for (const [key, value] of Object.entries(row)) {
+      if (!columns[key]) continue;
+      
+      const strValue = String(value || '').trim();
+      
+      // Count non-empty values
+      if (strValue !== '') {
+        columns[key].nonEmptyCount++;
+      
+        // Collect value examples (up to 3 per column)
+        if (columns[key].valueExamples.length < 3 && !columns[key].valueExamples.includes(strValue)) {
+          columns[key].valueExamples.push(strValue);
+        }
+      }
+      
+      // Determine column type
+      if (columns[key].type === 'unknown') {
+        if (strValue === '') {
+          continue; // Skip empty values for type detection
+        } else if (!isNaN(Number(strValue)) && strValue.indexOf('.') !== -1) {
+          columns[key].type = 'decimal';
+        } else if (!isNaN(Number(strValue))) {
+          columns[key].type = 'integer';
+        } else if (strValue.toLowerCase() === 'true' || strValue.toLowerCase() === 'false') {
+          columns[key].type = 'boolean';
+        } else if (strValue.indexOf(';') !== -1 || strValue.indexOf(',') !== -1) {
+          columns[key].type = 'list';
+        } else if (new Date(strValue).toString() !== 'Invalid Date' && isNaN(Number(strValue))) {
+          columns[key].type = 'date';
+        } else {
+          columns[key].type = 'string';
+        }
+      }
+      
+      // Try to map column names to standard product fields
+      if (columns[key].possibleMappings.length === 0) {
+        const normalizedKey = key.toLowerCase().trim().replace(/\s+/g, '_');
+        
+        if (/product[_\s]*id|item[_\s]*id|sku|asin|upc|ean|isbn|mpn|product[_\s]*code/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('product_id');
+        } else if (/title|name|product[_\s]*name|item[_\s]*name/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('title');
+        } else if (/desc|description|product[_\s]*desc|product[_\s]*description|long[_\s]*desc/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('description');
+        } else if (/price|cost|msrp|retail[_\s]*price|sale[_\s]*price/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('price');
+        } else if (/brand|manufacturer|vendor|supplier/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('brand');
+        } else if (/category|department|product[_\s]*type|type|group/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('category');
+        } else if (/bullet|feature|highlight|key[_\s]*feature|point/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('bullet_points');
+        } else if (/image|picture|photo|img|url|image[_\s]*url|main[_\s]*image/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('images');
+        } else if (/weight/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('weight');
+        } else if (/dimension|size|length|width|height|measurement/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('dimensions');
+        } else if (/color|colour/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('color');
+        } else if (/material|fabric|composition/i.test(normalizedKey)) {
+          columns[key].possibleMappings.push('material');
+        }
+      }
+    }
+  }
+  
+  // Calculate fill rate for each column
+  const totalRows = data.length;
+  const columnArray = Object.entries(columns).map(([name, info]) => ({
+    name,
+    type: info.type,
+    fillRate: totalRows > 0 ? (info.nonEmptyCount / totalRows) * 100 : 0,
+    examples: info.valueExamples,
+    possibleMappings: info.possibleMappings
+  }));
+  
+  // Sort columns by fill rate (descending)
+  columnArray.sort((a, b) => b.fillRate - a.fillRate);
+  
+  return {
+    rowCount: data.length,
+    columnCount: Object.keys(columns).length,
+    columns: columnArray
+  };
+}
+
+/**
+ * Maps CSV row data to product fields using intelligent field detection
+ * @param row The CSV row data
+ * @param product The product object to map to
+ * @param csvStructure Analysis of the CSV structure
+ */
+function mapCSVRowToProduct(row: any, product: Product, csvStructure: any): void {
+  // Create a mapping from CSV columns to product fields
+  const columnMappings: Record<string, string> = {};
+  
+  // Use the CSV structure analysis to determine field mappings
+  for (const column of csvStructure.columns) {
+    if (column.possibleMappings.length > 0) {
+      columnMappings[column.name] = column.possibleMappings[0];
+    }
+  }
+  
+  // Process each field in the row
+  for (const [key, value] of Object.entries(row)) {
+    if (value === undefined || value === null || value === '') continue;
+    
+    const strValue = String(value).trim();
+    const mappedField = columnMappings[key] || key.toLowerCase().trim().replace(/\s+/g, '_');
+    
+    // Handle special fields
+    if (mappedField === 'price') {
+      // Extract numeric part if the price has currency symbols
+      const numericPrice = strValue.replace(/[^0-9.]/g, '');
+      product.price = parseFloat(numericPrice) || undefined;
+    } else if (mappedField === 'images') {
+      // Check for different image separators (semicolon, comma, space)
+      if (strValue.includes(';')) {
+        product.images = strValue.split(';').map(img => img.trim()).filter(Boolean);
+      } else if (strValue.includes(',')) {
+        product.images = strValue.split(',').map(img => img.trim()).filter(Boolean);
+      } else if (strValue.includes(' ') && strValue.includes('http')) {
+        // If it looks like multiple URLs separated by spaces
+        product.images = strValue.split(' ').map(img => img.trim()).filter(url => url.startsWith('http'));
+      } else {
+        // Single image
+        product.images = [strValue];
+      }
+    } else if (mappedField === 'bullet_points') {
+      // Check for different bullet point separators
+      if (strValue.includes(';')) {
+        product.bullet_points = strValue.split(';').map(point => point.trim()).filter(Boolean);
+      } else if (strValue.includes(',')) {
+        product.bullet_points = strValue.split(',').map(point => point.trim()).filter(Boolean);
+      } else if (strValue.includes('\n')) {
+        product.bullet_points = strValue.split('\n').map(point => point.trim()).filter(Boolean);
+      } else {
+        // Single bullet point
+        product.bullet_points = [strValue];
+      }
+    } else if (mappedField === 'dimensions') {
+      product.dimensions = strValue;
+    } else if (mappedField === 'weight') {
+      product.weight = strValue;
+    } else if (mappedField === 'color') {
+      product.color = strValue;
+    } else if (mappedField === 'material') {
+      product.material = strValue;
+    } else if (Object.prototype.hasOwnProperty.call(product, mappedField)) {
+      // For other standard fields
+      (product as any)[mappedField] = strValue;
+    }
+  }
 }
 
 /**
