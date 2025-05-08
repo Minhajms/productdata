@@ -8,7 +8,11 @@ import { enhanceProductDataWithOpenAI } from "./services/openai-service";
 import { analyzeProductTypes } from "./services/product-detection-service";
 import { Product } from "@shared/schema";
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Configure multer with increased file size limits (50MB)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB file size limit
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Upload CSV file
@@ -33,7 +37,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error uploading file:", error);
-      res.status(500).json({ message: "Error processing uploaded file" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Error processing uploaded file", 
+        error: errorMessage
+      });
     }
   });
 
@@ -85,7 +93,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error enhancing products:", error);
-      res.status(500).json({ message: "Error enhancing products" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Error enhancing products", 
+        error: errorMessage
+      });
     }
   });
 
@@ -117,7 +129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error exporting products:", error);
-      res.status(500).json({ message: "Error exporting products" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Error exporting products", 
+        error: errorMessage
+      });
     }
   });
 
@@ -128,7 +144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ products });
     } catch (error) {
       console.error("Error fetching products:", error);
-      res.status(500).json({ message: "Error fetching products" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Error fetching products", 
+        error: errorMessage
+      });
     }
   });
 
@@ -139,7 +159,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ history });
     } catch (error) {
       console.error("Error fetching export history:", error);
-      res.status(500).json({ message: "Error fetching export history" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Error fetching export history", 
+        error: errorMessage
+      });
     }
   });
   
@@ -161,7 +185,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error analyzing products:", error);
-      res.status(500).json({ message: "Error analyzing products" });
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Error analyzing products", 
+        error: errorMessage
+      });
     }
   });
 
