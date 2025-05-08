@@ -181,7 +181,52 @@ async function callOpenAIAPI(prompt: string): Promise<string> {
     if (error.status === 429 || (error.error && error.error.type === 'insufficient_quota')) {
       console.warn("OpenAI API quota exceeded. Using fallback generation method.");
       
-      // Extract the key terms from the prompt for basic fallback content generation
+      // Try to use Gemini API instead
+      const geminiApiKey = process.env.GEMINI_API_KEY;
+      
+      if (geminiApiKey) {
+        try {
+          // Use the Gemini service to process the prompt
+          const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+          
+          const response = await fetch(`${apiUrl}?key=${geminiApiKey}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: prompt
+                    }
+                  ]
+                }
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 1024,
+              }
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.candidates && data.candidates.length > 0) {
+              const geminiContent = data.candidates[0].content.parts[0].text;
+              return geminiContent ? geminiContent.trim() : "";
+            }
+          }
+          console.warn("Gemini API fallback attempt failed. Using local fallback method.");
+        } catch (geminiError) {
+          console.error("Error using Gemini API fallback:", geminiError);
+        }
+      }
+      
+      // Local fallback if Gemini also fails
       const promptLines = prompt.split('\n').filter(line => line.trim().length > 0);
       let context = "";
       

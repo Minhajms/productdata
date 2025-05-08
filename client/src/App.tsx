@@ -16,12 +16,10 @@ function Router() {
 }
 
 function App() {
-  // Add event listener to handle Gemini API key from environment variable
+  // Remove client-side check for API keys as they are handled server-side only
   useEffect(() => {
-    // This is a client-side check only - the actual key will be used server-side
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
-      console.warn('No Gemini API key found in environment variables');
-    }
+    // The API keys are properly configured on the server side
+    // No need to check them on the client side anymore
   }, []);
 
   return (
