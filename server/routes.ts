@@ -90,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (geminiKey) {
             try {
               console.log("Falling back to Gemini API");
-              enhancedProducts = await enhanceProductData(products, marketplace);
+              enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
               console.log("Product enhancement completed successfully with Gemini fallback");
             } catch (geminiError: any) {
               console.error("Gemini API error:", geminiError);
@@ -108,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // No OpenAI key, try Gemini
         try {
           console.log("Using Gemini API for product enhancement");
-          enhancedProducts = await enhanceProductData(products, marketplace);
+          enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
           console.log("Product enhancement completed successfully with Gemini");
         } catch (geminiError: any) {
           console.error("Gemini API error:", geminiError);
@@ -211,14 +211,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analyze products to detect product types and suggest improvements
   app.post("/api/analyze-products", async (req, res) => {
     try {
-      const { products } = req.body;
+      const { products, productIds } = req.body;
+      let productsToAnalyze = [];
       
-      if (!products || !Array.isArray(products)) {
+      // If productIds are provided, fetch those products from the database
+      if (productIds && Array.isArray(productIds) && productIds.length > 0) {
+        console.log("Fetching products by IDs for analysis:", productIds);
+        productsToAnalyze = await storage.getProductsByIds(productIds);
+        console.log(`Found ${productsToAnalyze.length} products to analyze`);
+      } 
+      // Otherwise, use directly provided products array
+      else if (products && Array.isArray(products) && products.length > 0) {
+        productsToAnalyze = products;
+      }
+      
+      if (productsToAnalyze.length === 0) {
         return res.status(400).json({ message: "No valid products provided" });
       }
       
       // Analyze product types and suggest enhancements
-      const analysis = await analyzeProductTypes(products);
+      const analysis = await analyzeProductTypes(productsToAnalyze);
       
       res.json({
         message: "Product analysis completed",
