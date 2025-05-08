@@ -39,6 +39,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Debug environment variables
+  console.log("Environment variables check:");
+  console.log("GEMINI_API_KEY exists:", !!process.env.GEMINI_API_KEY);
+  console.log("OPENAI_API_KEY exists:", !!process.env.OPENAI_API_KEY);
+  console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

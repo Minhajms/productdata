@@ -11,6 +11,8 @@ export async function enhanceProductData(products: any[], marketplace: string): 
   const enhancedProducts: Product[] = [];
   const apiKey = process.env.GEMINI_API_KEY || "";
   
+  console.log("Gemini API key exists:", !!apiKey, "Length:", apiKey ? apiKey.length : 0);
+  
   if (!apiKey) {
     console.error("Missing Gemini API key");
     throw new Error("Missing Gemini API key. Please set the GEMINI_API_KEY environment variable.");
@@ -82,6 +84,7 @@ export async function enhanceProductData(products: any[], marketplace: string): 
  */
 async function callGeminiAPI(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || "";
+  console.log("Gemini API key in callGeminiAPI:", !!apiKey, "Length:", apiKey ? apiKey.length : 0);
   const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
   
   try {
