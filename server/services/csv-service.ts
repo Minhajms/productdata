@@ -244,6 +244,7 @@ function mapCSVRowToProduct(row: any, product: Product, csvStructure: any): void
       // Extract numeric part if the price has currency symbols
       const numericPrice = strValue.replace(/[^0-9.]/g, '');
       const price = parseFloat(numericPrice);
+      // Store as number since our schema now uses decimal type
       product.price = isNaN(price) ? null : price;
     } else if (mappedField === 'images') {
       // Check for different image separators (semicolon, comma, space)
@@ -270,18 +271,17 @@ function mapCSVRowToProduct(row: any, product: Product, csvStructure: any): void
         // Single bullet point
         product.bullet_points = [strValue];
       }
-    } else if (mappedField === 'dimensions') {
-      product.dimensions = strValue;
-    } else if (mappedField === 'weight') {
-      product.weight = strValue;
-    } else if (mappedField === 'color') {
-      product.color = strValue;
-    } else if (mappedField === 'material') {
-      product.material = strValue;
-    } else if (Object.prototype.hasOwnProperty.call(product, mappedField)) {
-      // For other standard fields
+    } else if (
+      mappedField === 'title' || 
+      mappedField === 'description' || 
+      mappedField === 'brand' || 
+      mappedField === 'category' || 
+      mappedField === 'asin'
+    ) {
+      // For standard fields in our schema
       (product as any)[mappedField] = strValue;
     }
+    // We're ignoring any fields not in our schema (dimensions, weight, color, material, etc.)
   }
 }
 

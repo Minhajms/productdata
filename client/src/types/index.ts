@@ -1,52 +1,34 @@
-import { IconType } from "react-icons";
+// Re-export all types from shared schema as needed for client-side code
+import type { Product as DbProduct } from '@shared/schema';
 
-export type ProcessStep = "upload" | "marketplace" | "analyze" | "review" | "export";
-
-export interface MarketplaceRequirement {
-  name: string;
-  required: boolean;
+// Define client-side types, extending shared DB types as needed
+export interface Product extends Omit<DbProduct, 'price'> {
+  // Override price as number for client-side processing
+  price: number | null;
 }
 
 export interface Marketplace {
   id: string;
   name: string;
   description: string;
-  icon: IconType;
   requirements: MarketplaceRequirement[];
+  logoUrl?: string;
+  isCustom?: boolean;
 }
 
-export interface Product {
-  product_id: string;
-  title?: string;
-  description?: string;
-  price?: number;
-  category?: string;
-  brand?: string;
-  images?: string[];
-  bullet_points?: string[];
-  asin?: string; // Amazon specific
-  [key: string]: any; // Allow for custom fields
+export interface MarketplaceRequirement {
+  field: string;
+  display: string;
+  required: boolean;
+  type: 'text' | 'number' | 'select' | 'image' | 'list';
+  options?: string[];
+  maxLength?: number;
 }
 
-export interface ProcessLog {
-  timestamp: Date;
-  message: string;
-  type: "info" | "success" | "warning" | "error";
-}
-
-export interface EnhancementStats {
-  totalProducts: number;
-  completedProducts: number;
-  productsWithWarnings: number;
-  productsWithErrors: number;
-  missingFields: number;
-}
-
-export interface ExportOptions {
-  format: string;
-  includeHeaders: boolean;
-  filterComplete: boolean;
-  selectedOnly: boolean;
-  encodeUtf8: boolean;
-  saveAsTemplate: boolean;
+export enum ProcessStep {
+  UPLOAD = 'upload',
+  MARKETPLACE = 'marketplace',
+  ANALYSIS = 'analysis',
+  REVIEW = 'review',
+  EXPORT = 'export',
 }
