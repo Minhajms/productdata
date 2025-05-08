@@ -31,8 +31,9 @@ export async function analyzeProductTypes(products: Product[]): Promise<{
       return fallbackProductAnalysis(products);
     }
 
-    // Get a sample of products (max 10) to keep response size manageable
-    const sampleProducts = products.slice(0, 10);
+    // Get a larger sample of products (max 25) for better analysis
+    // For very large datasets, we'll stratify the sample by taking products from beginning, middle and end
+    const sampleProducts = stratifySampleProducts(products, 25);
     
     // Generate JSON prompt for OpenAI
     const prompt = `
