@@ -484,9 +484,11 @@ async function generateTitleWithOpenAI(product: any, marketplace: string, maxLen
  */
 async function generateDescriptionWithOpenAI(product: any, marketplace: string, maxLength: number): Promise<string> {
   try {
-    // First, try to research the product if we don't have enough context
-    let productResearch = null;
-    if (!product.description || !product.category) {
+    // Check if we already have research data from previous steps
+    let productResearch = product._research || null;
+    
+    // If no research data is available, try to perform research
+    if (!productResearch && (!product.description || !product.category)) {
       try {
         productResearch = await researchProduct(product);
       } catch (error) {
@@ -624,9 +626,11 @@ async function generateDescriptionWithOpenAI(product: any, marketplace: string, 
  */
 async function generateBulletPointsWithOpenAI(product: any, marketplace: string, count: number): Promise<string[]> {
   try {
-    // First, try to research the product if we don't have enough context
-    let productResearch = null;
-    if (!product.bullet_points || product.bullet_points.length < 2 || !product.description) {
+    // Check if we already have research data from previous steps
+    let productResearch = product._research || null;
+    
+    // If no research data is available, try to perform research
+    if (!productResearch && (!product.bullet_points || product.bullet_points.length < 2 || !product.description)) {
       try {
         productResearch = await researchProduct(product);
       } catch (error) {
@@ -802,9 +806,11 @@ async function generateBulletPointsWithOpenAI(product: any, marketplace: string,
  */
 async function suggestBrandWithOpenAI(product: any): Promise<string> {
   try {
-    // First, try to research the product if we don't have enough context
-    let productResearch = null;
-    if (!product.brand && (!product.title || !product.description)) {
+    // Check if we already have research data from previous steps
+    let productResearch = product._research || null;
+    
+    // If no research data is available, try to perform research
+    if (!productResearch && (!product.brand && (!product.title || !product.description))) {
       try {
         productResearch = await researchProduct(product);
       } catch (error) {
@@ -894,9 +900,11 @@ async function suggestBrandWithOpenAI(product: any): Promise<string> {
  */
 async function suggestCategoryWithOpenAI(product: any, marketplace: string): Promise<string> {
   try {
-    // First, try to research the product if we don't have enough context
-    let productResearch = null;
-    if (!product.category && (!product.title || !product.description)) {
+    // Check if we already have research data from previous steps
+    let productResearch = product._research || null;
+    
+    // If no research data is available, try to perform research
+    if (!productResearch && (!product.category && (!product.title || !product.description))) {
       try {
         productResearch = await researchProduct(product);
       } catch (error) {
