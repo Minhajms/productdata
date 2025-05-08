@@ -43,8 +43,35 @@ export async function enhanceProductDataWithOpenAI(products: any[], marketplace:
         continue;
       }
       
+      // Research the product if it's missing significant information
+      // This helps generate better titles, descriptions and bullet points
+      let productResearch = null;
+      const significantFieldsMissing = missingFields.some(field => 
+        ['title', 'description', 'bullet_points', 'category'].includes(field.toLowerCase().replace(/\s+/g, '_'))
+      );
+      
+      if (significantFieldsMissing) {
+        try {
+          productResearch = await researchProduct(product);
+          console.log(`Product research completed for ${product.product_id}:`, 
+            productResearch ? productResearch.product_type : 'No research data'
+          );
+        } catch (researchError) {
+          console.warn(`Error researching product ${product.product_id}:`, researchError);
+          // Continue even if research fails
+        }
+      }
+      
       // Clone the product to avoid modifying the original
       const enhancedProduct = { ...product };
+      
+      // Apply product research insights if available
+      if (productResearch) {
+        // If we don't have a category yet, use the researched product type
+        if (!enhancedProduct.category && productResearch.product_type) {
+          enhancedProduct.category = productResearch.product_type;
+        }
+      }
       
       // Process each missing field
       for (const field of missingFields) {
@@ -158,19 +185,44 @@ function generateFallbackProduct(product: any, marketplace: string, marketplaceC
 /**
  * Calls the OpenAI API to generate content
  * @param prompt The prompt to send to OpenAI
+ * @param systemPrompt Optional custom system prompt for more specific instructions
+ * @param options Additional options for the API call
  * @returns Generated content
  */
-async function callOpenAIAPI(prompt: string): Promise<string> {
+async function callOpenAIAPI(
+  prompt: string, 
+  systemPrompt?: string,
+  options?: {
+    temperature?: number;
+    max_tokens?: number;
+    json_response?: boolean;
+    product_research?: boolean;
+  }
+): Promise<string> {
   try {
-    const response = await openai.chat.completions.create({
+    // Default system prompt for product enhancement
+    const defaultSystemPrompt = options?.product_research 
+      ? "You are a product research specialist who helps understand product data and enhance it for e-commerce marketplaces. You analyze product information to identify what a product is, what it does, and how to present it effectively online."
+      : "You are a professional product listing optimizer that creates marketplace-ready product content. Create compelling titles, descriptions, and bullet points that highlight benefits and uses SEO best practices.";
+      
+    const finalSystemPrompt = systemPrompt || defaultSystemPrompt;
+    
+    const apiOptions: any = {
       model: "gpt-4o",
       messages: [
-        { role: "system", content: "You are a professional product listing optimizer that creates marketplace-ready product content." },
+        { role: "system", content: finalSystemPrompt },
         { role: "user", content: prompt }
       ],
-      temperature: 0.7,
-      max_tokens: 1024
-    });
+      temperature: options?.temperature ?? 0.7,
+      max_tokens: options?.max_tokens ?? 1024
+    };
+    
+    // If JSON response is requested, add the appropriate format
+    if (options?.json_response) {
+      apiOptions.response_format = { type: "json_object" };
+    }
+    
+    const response = await openai.chat.completions.create(apiOptions);
 
     const generatedContent = response.choices[0].message.content;
     return generatedContent ? generatedContent.trim() : "";
@@ -186,6 +238,14 @@ async function callOpenAIAPI(prompt: string): Promise<string> {
       
       if (geminiApiKey) {
         try {
+          // For product research, use a more specific prompt
+          const geminiSystemPrompt = options?.product_research
+            ? "As a product research specialist, analyze this product information to identify what it is, how it's used, and how to present it effectively online."
+            : "As a product listing expert, optimize this content for marketplace listing. Create detailed and compelling product descriptions.";
+          
+          // Combine system message with user prompt for Gemini
+          const combinedPrompt = `${geminiSystemPrompt}\n\n${prompt}`;
+          
           // Use the Gemini service to process the prompt
           const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
           
@@ -199,16 +259,16 @@ async function callOpenAIAPI(prompt: string): Promise<string> {
                 {
                   parts: [
                     {
-                      text: prompt
+                      text: combinedPrompt
                     }
                   ]
                 }
               ],
               generationConfig: {
-                temperature: 0.7,
+                temperature: options?.temperature ?? 0.7,
                 topK: 40,
                 topP: 0.95,
-                maxOutputTokens: 1024,
+                maxOutputTokens: options?.max_tokens ?? 1024,
               }
             })
           });
@@ -216,8 +276,23 @@ async function callOpenAIAPI(prompt: string): Promise<string> {
           if (response.ok) {
             const data = await response.json();
             if (data.candidates && data.candidates.length > 0) {
-              const geminiContent = data.candidates[0].content.parts[0].text;
-              return geminiContent ? geminiContent.trim() : "";
+              let responseText = data.candidates[0].content.parts[0].text;
+              
+              // If JSON was requested, try to extract JSON from the response
+              if (options?.json_response) {
+                try {
+                  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                  if (jsonMatch) {
+                    responseText = jsonMatch[0];
+                    // Validate it's proper JSON
+                    JSON.parse(responseText);
+                  }
+                } catch (jsonError) {
+                  console.error("Failed to extract valid JSON from Gemini response");
+                }
+              }
+              
+              return responseText.trim();
             }
           }
           console.warn("Gemini API fallback attempt failed. Using local fallback method.");
@@ -266,19 +341,35 @@ async function callOpenAIAPI(prompt: string): Promise<string> {
  */
 async function generateTitleWithOpenAI(product: any, marketplace: string, maxLength: number): Promise<string> {
   try {
+    // First, try to research the product if we don't have enough context
+    let productResearch = null;
+    if (!product.title || !product.description || !product.category) {
+      try {
+        productResearch = await researchProduct(product);
+      } catch (error) {
+        console.warn("Error researching product for title generation:", error);
+      }
+    }
+    
     // Gather all available product information for better context
     const existingInfo = {
       product_id: product.product_id,
       description: product.description,
       brand: product.brand,
-      category: product.category,
+      category: product.category || (productResearch ? productResearch.product_type : null),
       features: product.bullet_points || [],
       price: product.price,
       dimensions: product.dimensions,
       weight: product.weight,
       material: product.material,
       color: product.color,
-      current_title: product.title
+      current_title: product.title,
+      research: productResearch ? {
+        product_type: productResearch.product_type,
+        likely_features: productResearch.likely_features,
+        target_audience: productResearch.target_audience,
+        search_terms: productResearch.search_terms
+      } : null
     };
     
     // Create marketplace-specific title format guidance
@@ -366,19 +457,36 @@ async function generateTitleWithOpenAI(product: any, marketplace: string, maxLen
  */
 async function generateDescriptionWithOpenAI(product: any, marketplace: string, maxLength: number): Promise<string> {
   try {
+    // First, try to research the product if we don't have enough context
+    let productResearch = null;
+    if (!product.description || !product.category) {
+      try {
+        productResearch = await researchProduct(product);
+      } catch (error) {
+        console.warn("Error researching product for description generation:", error);
+      }
+    }
+    
     // Gather all available product information for better context
     const existingInfo = {
       product_id: product.product_id,
       title: product.title,
       brand: product.brand,
-      category: product.category,
+      category: product.category || (productResearch ? productResearch.product_type : null),
       features: product.bullet_points || [],
       price: product.price,
       dimensions: product.dimensions,
       weight: product.weight,
       material: product.material,
       color: product.color,
-      current_description: product.description
+      current_description: product.description,
+      research: productResearch ? {
+        product_type: productResearch.product_type,
+        likely_features: productResearch.likely_features,
+        target_audience: productResearch.target_audience,
+        search_terms: productResearch.search_terms,
+        enhanced_understanding: productResearch.enhanced_understanding
+      } : null
     };
     
     // Create marketplace-specific description guidance
@@ -935,4 +1043,75 @@ function generateRandomASIN(): string {
   }
   
   return asin;
+}
+
+/**
+ * Researches product information to better understand what the product is
+ * @param product The product data with limited information
+ * @returns Enhanced understanding of the product
+ */
+export async function researchProduct(product: any): Promise<any> {
+  try {
+    // Gather all available product information
+    const productInfo = {
+      product_id: product.product_id,
+      title: product.title,
+      description: product.description,
+      brand: product.brand,
+      category: product.category,
+      bullet_points: product.bullet_points || [],
+      price: product.price,
+      dimensions: product.dimensions,
+      weight: product.weight,
+      material: product.material,
+      color: product.color
+    };
+    
+    // Create a research prompt that focuses on understanding what the product is
+    const prompt = `
+      Analyze this product data and help me understand what this product is. The information may be incomplete.
+      
+      Product Information:
+      ${JSON.stringify(productInfo, null, 2)}
+      
+      Please provide:
+      1. What type of product is this? (Be specific about the product category)
+      2. What are its likely key features and benefits?
+      3. Who would be the target audience?
+      4. What are likely search terms people would use to find this product?
+      5. What additional information would make this listing more complete?
+      
+      Format your response as JSON with these fields:
+      - product_type: String describing the specific product type
+      - likely_features: Array of strings with likely key features
+      - target_audience: String describing the target audience
+      - search_terms: Array of strings with likely search terms
+      - missing_information: Array of strings describing missing information
+      - enhanced_understanding: String with overall assessment of what this product is
+    `;
+    
+    const researchResult = await callOpenAIAPI(prompt, undefined, {
+      temperature: 0.5,
+      max_tokens: 800,
+      json_response: true,
+      product_research: true
+    });
+    
+    try {
+      return JSON.parse(researchResult);
+    } catch (jsonError) {
+      console.error("Failed to parse product research JSON:", jsonError);
+      return {
+        product_type: "Unknown",
+        likely_features: [],
+        target_audience: "General consumers",
+        search_terms: [],
+        missing_information: ["Unable to determine from provided data"],
+        enhanced_understanding: "Insufficient data to determine product details"
+      };
+    }
+  } catch (error) {
+    console.error("Error researching product:", error);
+    return null;
+  }
 }
