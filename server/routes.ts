@@ -59,29 +59,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const openaiKey = process.env.OPENAI_API_KEY;
       const geminiKey = process.env.GEMINI_API_KEY;
       
+      // Keep track of errors for better error reporting
+      const errors = [];
+      
       // Try to use OpenAI first, fall back to Gemini if OpenAI fails
       if (openaiKey) {
         try {
           console.log("Using OpenAI API for product enhancement");
           enhancedProducts = await enhanceProductDataWithOpenAI(products, marketplace);
-        } catch (openaiError) {
-          console.error("OpenAI API error:", openaiError);
           
-          // If Gemini key exists, try that as fallback
+          // If we got here, OpenAI worked successfully (either with API or fallback mechanism)
+          console.log("Product enhancement completed successfully with OpenAI");
+        } catch (openaiError: any) {
+          console.error("OpenAI API error:", openaiError);
+          errors.push(`OpenAI error: ${openaiError.message || 'Unknown error'}`);
+          
+          // Try Gemini as fallback
           if (geminiKey) {
-            console.log("Falling back to Gemini API");
-            enhancedProducts = await enhanceProductData(products, marketplace);
+            try {
+              console.log("Falling back to Gemini API");
+              enhancedProducts = await enhanceProductData(products, marketplace);
+              console.log("Product enhancement completed successfully with Gemini fallback");
+            } catch (geminiError: any) {
+              console.error("Gemini API error:", geminiError);
+              errors.push(`Gemini error: ${geminiError.message || 'Unknown error'}`);
+              
+              // Both APIs failed, send specific error
+              throw new Error(`Both OpenAI and Gemini enhancement failed. OpenAI: ${openaiError.message}, Gemini: ${geminiError.message}`);
+            }
           } else {
-            throw new Error("OpenAI enhancement failed and no Gemini API key available");
+            // No Gemini key available as fallback
+            throw new Error(`OpenAI enhancement failed and no Gemini API key available. Error: ${openaiError.message}`);
           }
         }
       } else if (geminiKey) {
         // No OpenAI key, try Gemini
-        console.log("Using Gemini API for product enhancement");
-        enhancedProducts = await enhanceProductData(products, marketplace);
+        try {
+          console.log("Using Gemini API for product enhancement");
+          enhancedProducts = await enhanceProductData(products, marketplace);
+          console.log("Product enhancement completed successfully with Gemini");
+        } catch (geminiError: any) {
+          console.error("Gemini API error:", geminiError);
+          errors.push(`Gemini error: ${geminiError.message || 'Unknown error'}`);
+          throw new Error(`Gemini enhancement failed: ${geminiError.message}`);
+        }
       } else {
         // No API keys available
-        throw new Error("No API keys available for product enhancement");
+        throw new Error("No API keys available for product enhancement. Please set either OPENAI_API_KEY or GEMINI_API_KEY in environment variables.");
+      }
+      
+      // If we don't have enhanced products at this point, something went wrong
+      if (!enhancedProducts) {
+        throw new Error(`Enhancement process failed to generate results. Errors: ${errors.join(', ')}`);
       }
       
       // Save enhanced products

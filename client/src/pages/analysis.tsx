@@ -39,13 +39,35 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
         analyzeData(data.products);
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Upload error:", error);
+      
+      // Try to extract detailed error message if available
+      let errorMessage = "Could not upload CSV file. Please try again.";
+      if (error?.response) {
+        try {
+          // Attempt to parse the error response
+          const errorData = error.response.json?.() || {};
+          if (errorData.error) {
+            errorMessage = `Upload failed: ${errorData.error}`;
+            // Check if it's a file size error
+            if (errorData.error.includes("payload") || errorData.error.includes("size")) {
+              errorMessage = "The file is too large. Please try a smaller file (max 50MB).";
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
+      }
+      
       toast({
         title: "Upload failed",
-        description: "Could not upload CSV file. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Add error to logs
+      addLog(`Upload error: ${errorMessage}`, "error");
       setProcessing(false);
     }
   });
@@ -64,13 +86,31 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
         onComplete(data.enhancedProducts);
       }, 1000);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Enhancement error:", error);
+      
+      // Try to extract detailed error message if available
+      let errorMessage = "Could not complete the enhancement process. Please try again.";
+      if (error?.response) {
+        try {
+          // Attempt to parse the error response
+          const errorData = error.response.json?.() || {};
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
+      }
+      
       toast({
         title: "Enhancement failed",
-        description: "Could not complete the enhancement process. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Add error to logs
+      addLog(`Enhancement error: ${errorMessage}`, "error");
       setProcessing(false);
     }
   });
@@ -103,9 +143,27 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
         });
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Product analysis error:", error);
-      addLog("Could not analyze product types", "error");
+      
+      // Try to extract detailed error message if available
+      let errorMessage = "Could not analyze product types";
+      if (error?.response) {
+        try {
+          // Attempt to parse the error response
+          const errorData = error.response.json?.() || {};
+          if (errorData.error) {
+            errorMessage = `Analysis failed: ${errorData.error}`;
+          }
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
+      }
+      
+      addLog(errorMessage, "error");
+      
+      // Continue with enhancement even if analysis fails
+      addLog("Proceeding with enhancement despite analysis failure", "warning");
     }
   });
 
