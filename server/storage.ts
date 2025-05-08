@@ -1,6 +1,6 @@
 import { db } from "@db";
 import { products, exportHistory, Product as DbProduct, ExportHistoryItem } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 class Storage {
   async saveProducts(productList: any[]): Promise<DbProduct[]> {
@@ -96,12 +96,25 @@ class Storage {
     }
   }
   
+  async getProductsByIds(productIds: string[]): Promise<DbProduct[]> {
+    try {
+      if (!productIds || productIds.length === 0) return [];
+      
+      // Use a simpler approach with multiple OR conditions
+      const result = await db.select().from(products);
+      return result.filter(product => productIds.includes(product.product_id));
+    } catch (error) {
+      console.error("Error fetching products by IDs:", error);
+      throw error;
+    }
+  }
+  
   async saveExportHistory(historyItem: Omit<ExportHistoryItem, "id">): Promise<ExportHistoryItem> {
     try {
       const [savedItem] = await db.insert(exportHistory).values({
         marketplace: historyItem.marketplace,
         format: historyItem.format,
-        product_count: historyItem.productCount,
+        product_count: historyItem.product_count,
         timestamp: historyItem.timestamp
       }).returning();
       
@@ -123,7 +136,6 @@ class Storage {
 }
 
 // Import the SQL functions for onConflictDoUpdate
-import { sql } from "drizzle-orm";
-import { desc } from "drizzle-orm";
+import { sql, desc } from "drizzle-orm";
 
 export const storage = new Storage();

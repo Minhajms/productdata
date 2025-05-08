@@ -48,9 +48,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhance product data with OpenAI or Gemini API
   app.post("/api/enhance", async (req, res) => {
     try {
-      const { products, marketplace } = req.body;
+      const { products, productIds, marketplace } = req.body;
+      let productsToEnhance = [];
       
-      if (!products || !Array.isArray(products)) {
+      // If productIds are provided, fetch those products from the database
+      if (productIds && Array.isArray(productIds) && productIds.length > 0) {
+        console.log("Fetching products by IDs:", productIds);
+        productsToEnhance = await storage.getProductsByIds(productIds);
+        console.log(`Found ${productsToEnhance.length} products to enhance`);
+      } 
+      // Otherwise, use directly provided products array
+      else if (products && Array.isArray(products) && products.length > 0) {
+        productsToEnhance = products;
+      }
+      
+      if (productsToEnhance.length === 0) {
         return res.status(400).json({ message: "No valid products provided" });
       }
       
@@ -66,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (openaiKey) {
         try {
           console.log("Using OpenAI API for product enhancement");
-          enhancedProducts = await enhanceProductDataWithOpenAI(products, marketplace);
+          enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
           
           // If we got here, OpenAI worked successfully (either with API or fallback mechanism)
           console.log("Product enhancement completed successfully with OpenAI");
