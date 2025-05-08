@@ -7,11 +7,12 @@ import { Product } from '@shared/schema';
  * @returns Array of product objects
  */
 export async function parseCSV(csvString: string): Promise<Product[]> {
-  return new Promise((resolve, reject) => {
-    Papa.parse(csvString, {
+  return new Promise<Product[]>((resolve, reject) => {
+    // Use type assertion to overcome type checking limitations with papaparse
+    (Papa as any).parse(csvString, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: (results: any) => {
         try {
           // Analyze CSV structure first to better understand the data
           const csvStructure = analyzeCSVStructure(results.data);
@@ -48,8 +49,9 @@ export async function parseCSV(csvString: string): Promise<Product[]> {
           reject(new Error(`Failed to parse CSV: ${error}`));
         }
       },
-      error: (error: Papa.ParseError) => {
-        reject(new Error(`Failed to parse CSV: ${error.message}`));
+      error: (error: any) => {
+        const message = error.message || 'Unknown parsing error';
+        reject(new Error(`Failed to parse CSV: ${message}`));
       }
     });
   });

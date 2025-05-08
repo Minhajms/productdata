@@ -12,7 +12,7 @@ class Storage {
         product_id: product.product_id,
         title: product.title || null,
         description: product.description || null,
-        price: typeof product.price === 'number' ? product.price : null,
+        price: product.price || null,
         brand: product.brand || null,
         category: product.category || null,
         bullet_points: product.bullet_points || null,
@@ -57,7 +57,7 @@ class Storage {
           .set({
             title: product.title || null,
             description: product.description || null,
-            price: typeof product.price === 'number' ? product.price : null,
+            price: product.price || null,
             brand: product.brand || null,
             category: product.category || null,
             bullet_points: product.bullet_points || null,
@@ -100,9 +100,9 @@ class Storage {
     try {
       if (!productIds || productIds.length === 0) return [];
       
-      // Use a simpler approach with multiple OR conditions
-      const result = await db.select().from(products);
-      return result.filter(product => productIds.includes(product.product_id));
+      // Use Drizzle's inArray operator for efficient querying
+      const result = await db.select().from(products).where(inArray(products.product_id, productIds));
+      return result;
     } catch (error) {
       console.error("Error fetching products by IDs:", error);
       throw error;
