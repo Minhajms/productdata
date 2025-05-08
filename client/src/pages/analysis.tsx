@@ -74,7 +74,7 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   });
   
   const enhanceMutation = useMutation({
-    mutationFn: async (payload: { products: Product[], marketplace: string }) => {
+    mutationFn: async (payload: { products?: Product[], productIds?: string[], marketplace: string }) => {
       const res = await apiRequest("POST", "/api/enhance", payload);
       return res.json();
     },
@@ -168,8 +168,8 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   
   // New mutation for product type analysis
   const productAnalysisMutation = useMutation({
-    mutationFn: async (products: Product[]) => {
-      const res = await apiRequest("POST", "/api/analyze-products", { products });
+    mutationFn: async (payload: { products?: Product[], productIds?: string[] }) => {
+      const res = await apiRequest("POST", "/api/analyze-products", payload);
       return res.json();
     },
     onSuccess: (data) => {
@@ -218,7 +218,7 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
     
     // Identify missing fields
     let missingFieldsCount = 0;
-    const requiredFields = marketplace.requirements.filter(r => r.required).map(r => r.name.toLowerCase());
+    const requiredFields = marketplace.requirements.filter(r => r.required).map(r => r.display.toLowerCase());
     
     products.forEach((product, index) => {
       const productMissingFields = requiredFields.filter(field => {
@@ -240,7 +240,10 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
     
     // Run product type detection with AI
     addLog("Starting advanced product analysis...", "info");
-    productAnalysisMutation.mutate(products);
+    
+    // Extract product IDs for more efficient API call
+    const productIds = products.map(product => product.product_id);
+    productAnalysisMutation.mutate({ productIds });
     
     // Continue to enhancement stage
     addLog("Moving to enhancement phase...", "info");
@@ -258,9 +261,12 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
       addLog("Note: Limited API access in development mode may use fallback content", "warning");
     }
     
-    // Call the backend to enhance products
+    // Extract product IDs for more efficient API call
+    const productIds = products.map(product => product.product_id);
+    
+    // Call the backend to enhance products with just the IDs
     enhanceMutation.mutate({ 
-      products,
+      productIds,
       marketplace: marketplace.name
     });
     
