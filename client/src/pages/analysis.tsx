@@ -22,6 +22,7 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<{ message: string; type: "info" | "success" | "warning" | "error" }[]>([]);
   const [processing, setProcessing] = useState(true);
+  const [cleanupFunction, setCleanupFunction] = useState<() => void>(() => {});
   const { toast } = useToast();
   
   // Upload file for processing
@@ -265,6 +266,8 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
     
     // Simulate progress for better UX
     let currentProgress = progress;
+    let progressIntervalId: number;
+    
     const simulateProgress = () => {
       setProgress(prev => {
         if (prev >= 99) return prev;
@@ -293,10 +296,14 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
       }
     };
     
-    const progressInterval = setInterval(simulateProgress, 300);
+    progressIntervalId = window.setInterval(simulateProgress, 300);
     
-    // Clear interval when mutation completes
-    return () => clearInterval(progressInterval);
+    // Store the interval ID for cleanup
+    setCleanupFunction(() => {
+      if (progressIntervalId) {
+        window.clearInterval(progressIntervalId);
+      }
+    });
   };
   
   useEffect(() => {
@@ -310,6 +317,16 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
       uploadMutation.mutate(formData);
     }
   }, [file, marketplace]);
+  
+  // Effect for cleanup on unmount
+  useEffect(() => {
+    // Return cleanup function for when component unmounts
+    return () => {
+      if (cleanupFunction) {
+        cleanupFunction();
+      }
+    };
+  }, [cleanupFunction]);
   
   const handleCancel = () => {
     // Clear any running progress simulation
