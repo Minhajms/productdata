@@ -78,13 +78,16 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
       return res.json();
     },
     onSuccess: (data) => {
+      // Ensure progress reaches 100% immediately
       setProgress(100);
       addLog("All products processed successfully", "success");
       
-      setTimeout(() => {
+      // Force the UI to update before continuing
+      requestAnimationFrame(() => {
+        // Complete the process
         setProcessing(false);
         onComplete(data.enhancedProducts);
-      }, 1000);
+      });
     },
     onError: (error: any) => {
       console.error("Enhancement error:", error);
@@ -122,12 +125,15 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
                 });
                 
                 // Continue to next step with current data
-                setTimeout(() => {
+                // Force progress to 100% and UI to update
+                setProgress(100);
+                addLog("Processing completed with partial results", "warning");
+                
+                // Force the UI to update before continuing
+                requestAnimationFrame(() => {
                   setProcessing(false);
-                  setProgress(100);
-                  addLog("Processing completed with partial results", "warning");
                   onComplete(productData);
-                }, 1000);
+                });
                 
                 return;
               }
@@ -246,6 +252,11 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
     addLog("Starting content generation with AI (OpenAI with Gemini fallback)", "info");
     addLog("Attempting to create optimized marketplace-ready content for your products", "info");
     
+    // Add a special warning if we're in development or testing mode with limited API access
+    if (process.env.NODE_ENV === 'development') {
+      addLog("Note: Limited API access in development mode may use fallback content", "warning");
+    }
+    
     // Call the backend to enhance products
     enhanceMutation.mutate({ 
       products,
@@ -301,7 +312,11 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   }, [file, marketplace]);
   
   const handleCancel = () => {
+    // Clear any running progress simulation
+    setProgress(0);
     setProcessing(false);
+    setLogs([]);
+    addLog("Process cancelled by user", "warning");
     onBack();
   };
 
