@@ -651,29 +651,72 @@ async function generateBulletPointsWithOpenAI(product: any, marketplace: string,
  */
 async function suggestBrandWithOpenAI(product: any): Promise<string> {
   try {
-    const existingInfo = [
-      product.title,
-      product.description,
-      product.product_id,
-      product.category
-    ].filter(Boolean).join(", ");
+    // Gather all available product information for better context
+    const existingInfo = {
+      product_id: product.product_id,
+      title: product.title,
+      description: product.description,
+      category: product.category,
+      bullet_points: product.bullet_points || [],
+      current_brand: product.brand
+    };
     
     const prompt = `
-      Based on the product information, suggest a realistic brand name.
-      If you can detect a brand name in the provided information, extract it.
-      Otherwise, suggest a plausible brand name that would fit this type of product.
-      Keep it short and professional.
+      Analyze this product information and identify or suggest an appropriate brand name.
       
-      Product details: ${existingInfo}
+      Guidelines:
+      - If a brand name is clearly present in the product information, extract and return it (highest priority)
+      - If product information contains model numbers with brand prefixes (like "SN-2000"), extract the brand part
+      - Look for capitalized proper nouns that appear to be manufacturer names
+      - If no brand is detected, suggest a plausible, professional brand name that would fit this type of product
+      - Brand names should be concise (1-2 words) and appropriate for the product category
+      - Avoid generic terms like "Premium" or "Quality" as stand-alone brand names
       
-      Return ONLY the brand name with no additional explanation or formatting.
+      Product information:
+      ${JSON.stringify(existingInfo, null, 2)}
+      
+      Return ONLY the brand name with no additional explanation, quotation marks, or formatting.
     `;
     
-    return await callOpenAIAPI(prompt);
+    const brandName = await callOpenAIAPI(prompt);
+    return brandName.trim();
   } catch (error) {
     console.error(`Error generating brand for product ${product.product_id}:`, error);
-    // Return a default brand name as fallback
-    return "TechPro";
+    
+    // Create a more specific fallback brand using available information
+    let fallbackBrand = "";
+    
+    // Try to extract brand from title if available
+    if (product.title) {
+      const words = product.title.split(' ');
+      // Use the first word if it's not a generic descriptor
+      const genericWords = ['new', 'premium', 'quality', 'best', 'professional', 'high', 'top'];
+      if (words.length > 0 && !genericWords.includes(words[0].toLowerCase())) {
+        fallbackBrand = words[0];
+      }
+    }
+    
+    // If we couldn't extract from title, use a more specific default based on category
+    if (!fallbackBrand && product.category) {
+      const category = product.category.toLowerCase();
+      if (category.includes('tech') || category.includes('electronic')) {
+        fallbackBrand = "TechPro";
+      } else if (category.includes('home') || category.includes('kitchen')) {
+        fallbackBrand = "HomeSmart";
+      } else if (category.includes('fashion') || category.includes('cloth')) {
+        fallbackBrand = "StyleLife";
+      } else if (category.includes('sport') || category.includes('outdoor')) {
+        fallbackBrand = "ActiveGear";
+      } else if (category.includes('beauty') || category.includes('personal')) {
+        fallbackBrand = "PureEssence";
+      } else {
+        fallbackBrand = "QualityPlus";
+      }
+    } else if (!fallbackBrand) {
+      fallbackBrand = "QualityPlus";
+    }
+    
+    return fallbackBrand;
   }
 }
 
@@ -685,28 +728,196 @@ async function suggestBrandWithOpenAI(product: any): Promise<string> {
  */
 async function suggestCategoryWithOpenAI(product: any, marketplace: string): Promise<string> {
   try {
-    const existingInfo = [
-      product.title,
-      product.description,
-      product.product_id,
-      product.brand
-    ].filter(Boolean).join(", ");
+    // Gather all available product information for better context
+    const existingInfo = {
+      product_id: product.product_id,
+      title: product.title,
+      description: product.description,
+      brand: product.brand,
+      bullet_points: product.bullet_points || [],
+      dimensions: product.dimensions,
+      weight: product.weight,
+      material: product.material,
+      color: product.color,
+      current_category: product.category
+    };
+    
+    // Create marketplace-specific category guidance
+    let marketplaceGuidance = "";
+    if (marketplace === "Amazon") {
+      marketplaceGuidance = `
+        Amazon main categories include:
+        - Electronics
+        - Computers & Accessories
+        - Smart Home
+        - Arts & Crafts
+        - Automotive
+        - Baby
+        - Beauty & Personal Care
+        - Books
+        - Fashion
+        - Home & Kitchen
+        - Industrial & Scientific
+        - Movies & TV
+        - Music, CDs & Vinyl
+        - Pet Supplies
+        - Software
+        - Sports & Outdoors
+        - Tools & Home Improvement
+        - Toys & Games
+        - Video Games
+      `;
+    } else if (marketplace === "eBay") {
+      marketplaceGuidance = `
+        eBay main categories include:
+        - Antiques
+        - Art
+        - Baby
+        - Books, Comics & Magazines
+        - Business, Office & Industrial
+        - Cameras & Photography
+        - Cars, Motorcycles & Vehicles
+        - Clothes, Shoes & Accessories
+        - Coins
+        - Collectables
+        - Computing
+        - Consumer Electronics
+        - Crafts
+        - Dolls & Bears
+        - DVDs, Films & TV
+        - Health & Beauty
+        - Home, Furniture & DIY
+        - Jewelry & Watches
+        - Mobile Phones & Communication
+        - Music
+        - Musical Instruments
+        - Pet Supplies
+        - Pottery, Porcelain & Glass
+        - Sporting Goods
+        - Sports Memorabilia
+        - Stamps
+        - Tickets & Experiences
+        - Toys & Games
+        - Video Games & Consoles
+      `;
+    } else if (marketplace === "Etsy") {
+      marketplaceGuidance = `
+        Etsy main categories include:
+        - Jewelry & Accessories
+        - Clothing & Shoes
+        - Home & Living
+        - Wedding & Party
+        - Toys & Entertainment
+        - Art & Collectibles
+        - Craft Supplies
+        - Vintage
+        - Gifts
+      `;
+    } else if (marketplace === "Walmart") {
+      marketplaceGuidance = `
+        Walmart main categories include:
+        - Electronics
+        - Office
+        - Home
+        - Furniture
+        - Appliances
+        - Toys
+        - Video Games
+        - Movies & TV Shows
+        - Music
+        - Books
+        - Clothing
+        - Baby
+        - Patio & Garden
+        - Health
+        - Beauty
+        - Sports & Outdoors
+        - Auto & Tires
+        - Photo
+        - Art & Craft Supplies
+        - Holiday & Seasonal
+      `;
+    } else {
+      marketplaceGuidance = `
+        Common ecommerce categories include:
+        - Electronics & Computers
+        - Smart Home
+        - Home & Kitchen
+        - Furniture
+        - Appliances
+        - Beauty & Personal Care
+        - Fashion & Apparel
+        - Sports & Outdoors
+        - Toys & Games
+        - Books & Media
+        - Health & Wellness
+        - Automotive
+        - Tools & Home Improvement
+        - Office Supplies
+        - Pet Supplies
+        - Grocery & Gourmet
+        - Arts & Crafts
+        - Garden & Outdoor
+        - Baby & Kids
+      `;
+    }
     
     const prompt = `
-      Based on the product information, suggest the most appropriate product category for ${marketplace}.
-      Keep it simple and use standard category names commonly found on ${marketplace}.
-      Examples: Electronics, Home & Kitchen, Clothing, Beauty, Toys & Games, etc.
+      Analyze this product information and suggest the most appropriate product category for ${marketplace}.
       
-      Product details: ${existingInfo}
+      ${marketplaceGuidance}
       
-      Return ONLY the category name with no additional explanation or formatting.
+      Guidelines:
+      - Select the single most appropriate category from the ${marketplace} category list above
+      - If the exact category isn't listed, choose the closest match
+      - If the product could fit multiple categories, select the primary one that best describes its main purpose
+      - Return only the category name, not subcategories
+      - If a clear category is already present in the product information and it matches ${marketplace}'s taxonomy, use it
+      
+      Product information:
+      ${JSON.stringify(existingInfo, null, 2)}
+      
+      Return ONLY the category name with no additional explanation, quotation marks, or formatting.
     `;
     
-    return await callOpenAIAPI(prompt);
+    const category = await callOpenAIAPI(prompt);
+    return category.trim();
   } catch (error) {
     console.error(`Error generating category for product ${product.product_id}:`, error);
-    // Return a default category as fallback
-    return "General Merchandise";
+    
+    // Create a more specific fallback category using available information
+    let fallbackCategory = "General Merchandise";
+    
+    // Try to determine category from product title and description
+    const productText = [
+      product.title || "", 
+      product.description || ""
+    ].join(" ").toLowerCase();
+    
+    // Check for common category keywords
+    if (/phone|smartphone|tablet|computer|laptop|desktop|monitor|router|camera|headphones|speaker|tv|television/i.test(productText)) {
+      fallbackCategory = "Electronics";
+    } else if (/shirt|dress|pants|shoes|clothing|jacket|hat|socks|fashion|wear|apparel/i.test(productText)) {
+      fallbackCategory = "Clothing";
+    } else if (/kitchen|cookware|utensil|appliance|refrigerator|microwave|blender|mixer|pot|pan/i.test(productText)) {
+      fallbackCategory = "Home & Kitchen";
+    } else if (/sofa|chair|table|bed|furniture|desk|drawer|cabinet|shelf/i.test(productText)) {
+      fallbackCategory = "Furniture";
+    } else if (/toy|game|puzzle|board game|doll|action figure|stuffed/i.test(productText)) {
+      fallbackCategory = "Toys & Games";
+    } else if (/book|novel|textbook|magazine|publication/i.test(productText)) {
+      fallbackCategory = "Books";
+    } else if (/beauty|makeup|skin care|cosmetic|lotion|perfume|cologne/i.test(productText)) {
+      fallbackCategory = "Beauty & Personal Care";
+    } else if (/sport|exercise|fitness|workout|gym|outdoor|camping|hiking/i.test(productText)) {
+      fallbackCategory = "Sports & Outdoors";
+    } else if (/tool|drill|saw|hammer|screwdriver|wrench|hardware/i.test(productText)) {
+      fallbackCategory = "Tools & Home Improvement";
+    } else if (/pet|dog|cat|bird|fish|animal/i.test(productText)) {
+      fallbackCategory = "Pet Supplies";
+    }
+    
+    return fallbackCategory;
   }
 }
 
