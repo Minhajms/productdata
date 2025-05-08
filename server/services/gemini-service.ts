@@ -85,48 +85,91 @@ export async function enhanceProductData(products: any[], marketplace: string): 
 async function callGeminiAPI(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || "";
   console.log("Gemini API key in callGeminiAPI:", !!apiKey, "Length:", apiKey ? apiKey.length : 0);
-  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
   
-  try {
-    const response = await fetch(`${apiUrl}?key=${apiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ],
-        generationConfig: {
+  // Check if we're using the new API key format (sk-or-v1-...)
+  if (apiKey.startsWith('sk-or-v1-')) {
+    // Use the OpenAI-style client for the new API key format
+    try {
+      const response = await fetch("https://api.gemini.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gemini-pro",
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
           temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        }
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
+          max_tokens: 1024,
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
+      }
+      
+      const data = await response.json();
+      if (!data.choices || data.choices.length === 0) {
+        throw new Error("Empty response from Gemini API");
+      }
+      
+      const generatedContent = data.choices[0].message.content;
+      return generatedContent.trim();
+    } catch (error) {
+      console.error("Error calling Gemini API with new format:", error);
+      throw error;
     }
+  } else {
+    // Use the original Google AI API format
+    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
     
-    const data = await response.json();
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error("Empty response from Gemini API");
+    try {
+      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          }
+        })
+      });
+    
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
+      }
+      
+      const data = await response.json();
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error("Empty response from Gemini API");
+      }
+      
+      const generatedContent = data.candidates[0].content.parts[0].text;
+      return generatedContent.trim();
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      throw error;
     }
-    
-    const generatedContent = data.candidates[0].content.parts[0].text;
-    return generatedContent.trim();
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    throw error;
   }
 }
 
