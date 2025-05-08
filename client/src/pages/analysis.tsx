@@ -80,6 +80,35 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
     setLogs(prev => [...prev, { message: `${timestamp} - ${message}`, type }]);
   };
   
+  // New mutation for product type analysis
+  const productAnalysisMutation = useMutation({
+    mutationFn: async (products: Product[]) => {
+      const res = await apiRequest("POST", "/api/analyze-products", { products });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.productTypes && data.productTypes.length > 0) {
+        addLog(`Detected product types: ${data.productTypes.join(", ")}`, "info");
+      }
+      
+      if (data.enhancementSuggestions && data.enhancementSuggestions.length > 0) {
+        data.enhancementSuggestions.forEach((suggestion: string) => {
+          addLog(`Suggestion: ${suggestion}`, "info");
+        });
+      }
+      
+      if (data.commonMissingFields && data.commonMissingFields.length > 0) {
+        data.commonMissingFields.forEach((field: { field: string; percentage: number }) => {
+          addLog(`${field.percentage}% of products missing ${field.field}`, "warning");
+        });
+      }
+    },
+    onError: (error) => {
+      console.error("Product analysis error:", error);
+      addLog("Could not analyze product types", "error");
+    }
+  });
+
   const analyzeData = (products: Product[]) => {
     if (!marketplace) return;
     
@@ -99,13 +128,18 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
       }
       
       // Update progress
-      const newProgress = Math.min(50, Math.round(((index + 1) / products.length) * 50));
+      const newProgress = Math.min(30, Math.round(((index + 1) / products.length) * 30));
       setProgress(newProgress);
     });
     
-    addLog(`Analysis complete. Found ${missingFieldsCount} products with missing required fields`, "info");
+    addLog(`Basic analysis complete. Found ${missingFieldsCount} products with missing required fields`, "info");
     
-    // Start enhancement
+    // Run product type detection with AI
+    addLog("Starting advanced product analysis...", "info");
+    productAnalysisMutation.mutate(products);
+    
+    // Continue to enhancement stage
+    addLog("Moving to enhancement phase...", "info");
     enhanceProducts(products);
   };
   

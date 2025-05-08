@@ -49,6 +49,28 @@ export function Upload({ onFileUpload }: UploadProps) {
         Upload a CSV file containing your product information. We'll help you transform it into marketplace-ready listings.
       </p>
       
+      <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
+        <h3 className="text-blue-800 font-medium text-sm mb-2">What happens next?</h3>
+        <ul className="text-blue-700 text-sm space-y-2">
+          <li className="flex items-start">
+            <span className="mr-2 mt-0.5">1.</span>
+            <span>We'll analyze your product data to identify which type of products you're selling</span>
+          </li>
+          <li className="flex items-start">
+            <span className="mr-2 mt-0.5">2.</span>
+            <span>Our AI will identify missing or incomplete fields that could improve your listings</span>
+          </li>
+          <li className="flex items-start">
+            <span className="mr-2 mt-0.5">3.</span>
+            <span>We'll enhance your listings with SEO-optimized titles, compelling descriptions, and persuasive bullet points</span>
+          </li>
+          <li className="flex items-start">
+            <span className="mr-2 mt-0.5">4.</span>
+            <span>You'll be able to review and edit all AI-generated content before exporting</span>
+          </li>
+        </ul>
+      </div>
+      
       <FileUploader onFileUpload={handleFileUpload} />
     </div>
   );

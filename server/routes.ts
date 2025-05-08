@@ -5,6 +5,7 @@ import multer from "multer";
 import { parseCSV, generateCSV } from "./services/csv-service";
 import { enhanceProductData } from "./services/gemini-service";
 import { enhanceProductDataWithOpenAI } from "./services/openai-service";
+import { analyzeProductTypes } from "./services/product-detection-service";
 import { Product } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -139,6 +140,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching export history:", error);
       res.status(500).json({ message: "Error fetching export history" });
+    }
+  });
+  
+  // Analyze products to detect product types and suggest improvements
+  app.post("/api/analyze-products", async (req, res) => {
+    try {
+      const { products } = req.body;
+      
+      if (!products || !Array.isArray(products)) {
+        return res.status(400).json({ message: "No valid products provided" });
+      }
+      
+      // Analyze product types and suggest enhancements
+      const analysis = await analyzeProductTypes(products);
+      
+      res.json({
+        message: "Product analysis completed",
+        ...analysis
+      });
+    } catch (error) {
+      console.error("Error analyzing products:", error);
+      res.status(500).json({ message: "Error analyzing products" });
     }
   });
 
