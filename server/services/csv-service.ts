@@ -24,6 +24,14 @@ export async function parseCSV(csvString: string): Promise<Product[]> {
             
             const product: Product = {
               product_id: extractProductId(row) || generateRandomId(),
+              title: null,
+              description: null,
+              price: null,
+              brand: null,
+              category: null,
+              bullet_points: null,
+              images: null,
+              asin: null,
               status: 'pending',
               created_at: new Date(),
               updated_at: new Date()
@@ -235,7 +243,8 @@ function mapCSVRowToProduct(row: any, product: Product, csvStructure: any): void
     if (mappedField === 'price') {
       // Extract numeric part if the price has currency symbols
       const numericPrice = strValue.replace(/[^0-9.]/g, '');
-      product.price = parseFloat(numericPrice) || undefined;
+      const price = parseFloat(numericPrice);
+      product.price = isNaN(price) ? null : price;
     } else if (mappedField === 'images') {
       // Check for different image separators (semicolon, comma, space)
       if (strValue.includes(';')) {
