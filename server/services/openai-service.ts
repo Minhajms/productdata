@@ -266,31 +266,94 @@ async function callOpenAIAPI(prompt: string): Promise<string> {
  */
 async function generateTitleWithOpenAI(product: any, marketplace: string, maxLength: number): Promise<string> {
   try {
-    const existingInfo = [
-      product.product_id,
-      product.description,
-      product.brand,
-      product.category
-    ].filter(Boolean).join(", ");
+    // Gather all available product information for better context
+    const existingInfo = {
+      product_id: product.product_id,
+      description: product.description,
+      brand: product.brand,
+      category: product.category,
+      features: product.bullet_points || [],
+      price: product.price,
+      dimensions: product.dimensions,
+      weight: product.weight,
+      material: product.material,
+      color: product.color,
+      current_title: product.title
+    };
+    
+    // Create marketplace-specific title format guidance
+    let marketplaceGuidance = "";
+    if (marketplace === "Amazon") {
+      marketplaceGuidance = `
+        For Amazon listings:
+        - Format: [Brand] + [Key Feature] + [Product Type] + [Size/Quantity/Color if applicable]
+        - Example: "Sony X900H 65-Inch 4K Ultra HD Smart LED TV with HDR and Alexa Compatibility"
+        - Start with the brand if available
+        - Include 3-5 key features that differentiate the product
+      `;
+    } else if (marketplace === "eBay") {
+      marketplaceGuidance = `
+        For eBay listings:
+        - Be specific and descriptive
+        - Include brand, model, size, color as applicable
+        - Use popular search terms but avoid keyword stuffing
+        - Example: "Apple iPhone 12 Pro Max 256GB Pacific Blue Unlocked Excellent Condition"
+      `;
+    } else if (marketplace === "Etsy") {
+      marketplaceGuidance = `
+        For Etsy listings:
+        - Highlight handmade, custom, or vintage aspects
+        - Include materials and purpose
+        - Be descriptive about uniqueness
+        - Example: "Handcrafted Walnut Wood Desk Organizer with Phone Stand, Custom Office Accessory"
+      `;
+    } else if (marketplace === "Walmart") {
+      marketplaceGuidance = `
+        For Walmart listings:
+        - Be direct and practical
+        - Include brand, product type, key features
+        - Example: "Samsung 55-inch 4K Smart TV with HDR, 120Hz Refresh Rate, Gaming Mode"
+      `;
+    } else {
+      marketplaceGuidance = `
+        General title best practices:
+        - Start with the brand name
+        - Include key features and product type
+        - Add size, color, quantity as applicable
+        - Use common search terms but avoid keyword stuffing
+      `;
+    }
     
     const prompt = `
-      Create an SEO-optimized product title for ${marketplace} marketplace. 
-      Keep it under ${maxLength} characters.
-      Make it descriptive and include important features.
-      If possible, include brand and key attributes.
-      Don't use ALL CAPS or excessive special characters.
+      Create a highly effective SEO-optimized product title for ${marketplace} marketplace.
       
-      Product details: ${existingInfo}
+      ${marketplaceGuidance}
       
-      Return ONLY the title text with no additional explanation or formatting.
+      Constraints:
+      - Maximum length: ${maxLength} characters
+      - Must be descriptive and compelling
+      - Include most important features and benefits
+      - No ALL CAPS words (except for acronyms like "HD" or "USB")
+      - No excessive special characters or emoji
+      - No promotional language like "best", "amazing", etc.
+      
+      Product information:
+      ${JSON.stringify(existingInfo, null, 2)}
+      
+      Return ONLY the title text with no additional explanation, quotation marks, or formatting.
     `;
     
     const title = await callOpenAIAPI(prompt);
     return title.substring(0, maxLength);
   } catch (error) {
     console.error(`Error generating title for product ${product.product_id}:`, error);
-    // Return a basic title as fallback
-    return `Premium Product - ${product.product_id}`;
+    
+    // Create a more specific fallback title using available information
+    const brandPart = product.brand ? `${product.brand} ` : '';
+    const categoryPart = product.category ? `${product.category} ` : 'Product ';
+    const idPart = product.product_id ? `#${product.product_id.substring(0, 6)}` : '';
+    
+    return `${brandPart}${categoryPart}${idPart}`.substring(0, maxLength);
   }
 }
 
@@ -303,31 +366,117 @@ async function generateTitleWithOpenAI(product: any, marketplace: string, maxLen
  */
 async function generateDescriptionWithOpenAI(product: any, marketplace: string, maxLength: number): Promise<string> {
   try {
-    const existingInfo = [
-      product.title,
-      product.product_id,
-      product.brand,
-      product.category
-    ].filter(Boolean).join(", ");
+    // Gather all available product information for better context
+    const existingInfo = {
+      product_id: product.product_id,
+      title: product.title,
+      brand: product.brand,
+      category: product.category,
+      features: product.bullet_points || [],
+      price: product.price,
+      dimensions: product.dimensions,
+      weight: product.weight,
+      material: product.material,
+      color: product.color,
+      current_description: product.description
+    };
+    
+    // Create marketplace-specific description guidance
+    let marketplaceGuidance = "";
+    if (marketplace === "Amazon") {
+      marketplaceGuidance = `
+        For Amazon listings:
+        - Start with a compelling overview paragraph
+        - Format with clear paragraph breaks (3-4 paragraphs total)
+        - Include product specifications in the final paragraph
+        - Focus on benefits and use cases, not just features
+        - Be detailed but not overly promotional
+      `;
+    } else if (marketplace === "eBay") {
+      marketplaceGuidance = `
+        For eBay listings:
+        - Start with key product features
+        - Include any condition details if applicable
+        - Be factual and straightforward
+        - Include dimensions, materials, and technical specs where relevant
+      `;
+    } else if (marketplace === "Etsy") {
+      marketplaceGuidance = `
+        For Etsy listings:
+        - Highlight handmade, custom, or vintage aspects
+        - Tell the story behind the product if applicable
+        - Describe materials and creation process
+        - Include care instructions and personalization options
+      `;
+    } else {
+      marketplaceGuidance = `
+        General description best practices:
+        - Start with an engaging overview
+        - Organize information into logical paragraphs
+        - Balance features with benefits
+        - Include practical use cases
+        - End with specifications and technical details
+      `;
+    }
     
     const prompt = `
-      Create a detailed product description for ${marketplace} marketplace.
-      Keep it under ${maxLength} characters.
-      Include key features, benefits, and use cases.
-      Use clear, professional language with appropriate paragraph breaks.
-      Be accurate and persuasive without being overly promotional.
+      Create a detailed, persuasive product description for ${marketplace} marketplace.
       
-      Product details: ${existingInfo}
+      ${marketplaceGuidance}
       
-      Return ONLY the description text with no additional explanation or formatting.
+      Constraints:
+      - Maximum length: ${maxLength} characters
+      - Write in a professional, clear tone
+      - Use natural paragraph breaks for readability
+      - Include specific product features AND their benefits to users
+      - Avoid clichés like "premium quality" without supporting details
+      - No promotional superlatives like "best" or "amazing" without substantiation
+      
+      Product information:
+      ${JSON.stringify(existingInfo, null, 2)}
+      
+      Return ONLY the description text with appropriate paragraph breaks. No additional formatting, explanations, or quotation marks.
     `;
     
     const description = await callOpenAIAPI(prompt);
     return description.substring(0, maxLength);
   } catch (error) {
     console.error(`Error generating description for product ${product.product_id}:`, error);
-    // Return a basic description as fallback
-    return `This is a high-quality product with excellent features. Great for everyday use and long-lasting performance. Customers love this product for its reliability and value.`;
+    
+    // Create a more specific fallback description using available information
+    let fallbackDescription = "";
+    
+    // Include brand if available
+    if (product.brand) {
+      fallbackDescription += `This ${product.brand} product `;
+    } else {
+      fallbackDescription += "This product ";
+    }
+    
+    // Add category information if available
+    if (product.category) {
+      fallbackDescription += `is designed for the ${product.category} category. `;
+    } else {
+      fallbackDescription += "is designed to meet your needs. ";
+    }
+    
+    // Add some generic quality statements
+    fallbackDescription += "It features quality construction and reliable performance. ";
+    
+    // Add specifications if available
+    if (product.dimensions || product.weight || product.material || product.color) {
+      fallbackDescription += "Specifications: ";
+      
+      if (product.dimensions) fallbackDescription += `Dimensions: ${product.dimensions}. `;
+      if (product.weight) fallbackDescription += `Weight: ${product.weight}. `;
+      if (product.material) fallbackDescription += `Material: ${product.material}. `;
+      if (product.color) fallbackDescription += `Color: ${product.color}. `;
+    }
+    
+    // Add contact information suggestion
+    fallbackDescription += "Contact us with any questions about this item.";
+    
+    return fallbackDescription;
   }
 }
 
@@ -340,50 +489,158 @@ async function generateDescriptionWithOpenAI(product: any, marketplace: string, 
  */
 async function generateBulletPointsWithOpenAI(product: any, marketplace: string, count: number): Promise<string[]> {
   try {
-    const existingInfo = [
-      product.title,
-      product.description,
-      product.product_id,
-      product.brand,
-      product.category
-    ].filter(Boolean).join(", ");
+    // Gather all available product information for better context
+    const existingInfo = {
+      product_id: product.product_id,
+      title: product.title,
+      description: product.description,
+      brand: product.brand,
+      category: product.category,
+      price: product.price,
+      dimensions: product.dimensions,
+      weight: product.weight,
+      material: product.material,
+      color: product.color,
+      current_bullet_points: product.bullet_points || []
+    };
+    
+    // Create marketplace-specific bullet point guidance
+    let marketplaceGuidance = "";
+    if (marketplace === "Amazon") {
+      marketplaceGuidance = `
+        For Amazon bullet points:
+        - Start with a benefit, followed by the feature that enables it
+        - Use sentence case (capitalize first word only)
+        - Keep each under 200 characters
+        - Avoid including warranties or shipping info in bullet points
+        - Focus on what differentiates the product
+      `;
+    } else if (marketplace === "eBay") {
+      marketplaceGuidance = `
+        For eBay bullet points:
+        - Be concise and factual
+        - Include key specifications and features
+        - Mention compatibility or use cases
+        - Focus on objective statements
+      `;
+    } else if (marketplace === "Etsy") {
+      marketplaceGuidance = `
+        For Etsy bullet points:
+        - Highlight handmade aspects or uniqueness
+        - Include materials, dimensions, and customization options
+        - Mention ideal uses or occasions for the item
+        - Note any sustainability aspects if applicable
+      `;
+    } else {
+      marketplaceGuidance = `
+        General bullet point best practices:
+        - Lead with benefits, followed by features
+        - Keep each point to one main idea
+        - Be specific about dimensions, capabilities, and materials
+        - Prioritize information by importance to the buyer
+      `;
+    }
     
     const prompt = `
-      Create ${count} bullet points for ${marketplace} product listing.
-      Each bullet point should highlight a key feature or benefit.
-      Keep each bullet point concise (under 100 characters if possible).
-      Be specific and focus on what makes the product valuable to customers.
+      Create ${count} compelling bullet points for a ${marketplace} product listing.
       
-      Product details: ${existingInfo}
+      ${marketplaceGuidance}
       
-      Return ONLY a list of ${count} bullet points, one per line, with no additional explanation or formatting.
+      Guidelines:
+      - Each bullet point should highlight a distinct key feature or benefit
+      - Begin with the benefit to the customer when possible
+      - Be specific and avoid generic statements
+      - Keep each bullet point concise but meaningful (under 100 characters if possible)
+      - No bullet points about shipping, warranty, or company history
+      - Focus on what makes the product valuable and distinctive
+      - Avoid repeating information across bullet points
+      
+      Product information:
+      ${JSON.stringify(existingInfo, null, 2)}
+      
+      Return ONLY a list of ${count} bullet points, one per line, with no bullets, numbers, or other prefixes.
+      Do not include any additional explanation or formatting.
     `;
     
     const bulletPointsText = await callOpenAIAPI(prompt);
+    
     // Split by newlines and clean up
     const bulletPoints = bulletPointsText
       .split('\n')
       .map(point => point.trim())
-      .filter(point => point.length > 0 && !point.startsWith('•'))
-      .map(point => point.startsWith('-') ? point.substring(1).trim() : point)
+      .filter(point => point.length > 0 && !point.startsWith('•') && !point.startsWith('*'))
+      .map(point => {
+        // Remove any bullet characters, numbers or dashes at the beginning
+        return point.replace(/^[-•*]|\d+[.)]\s*|[*]\s+/, '').trim();
+      })
       .slice(0, count);
     
-    // If we don't have enough bullet points, pad with empty ones
-    while (bulletPoints.length < count) {
-      bulletPoints.push(`Feature ${bulletPoints.length + 1}`);
+    // If we don't have enough bullet points, generate more specific fallbacks
+    if (bulletPoints.length < count) {
+      const fallbacks = [];
+      
+      if (product.brand) fallbacks.push(`Made by ${product.brand} with attention to quality and detail`);
+      if (product.material) fallbacks.push(`Constructed from durable ${product.material} for long-lasting performance`);
+      if (product.color) fallbacks.push(`Available in ${product.color} to match your style preferences`);
+      if (product.dimensions) fallbacks.push(`Perfect size at ${product.dimensions} for convenient use`);
+      if (product.category) fallbacks.push(`Designed specifically for ${product.category} applications`);
+      
+      // Generic fallbacks if needed
+      fallbacks.push(
+        "Thoughtfully designed for ease of use and functionality",
+        "Customer satisfaction is our top priority with this product",
+        "Versatile design makes it suitable for multiple applications",
+        "Quality construction ensures reliability and durability",
+        "Excellent value for the price compared to similar products"
+      );
+      
+      // Add unique fallbacks until we reach the desired count
+      let fallbackIndex = 0;
+      while (bulletPoints.length < count && fallbackIndex < fallbacks.length) {
+        const fallback = fallbacks[fallbackIndex];
+        if (!bulletPoints.includes(fallback)) {
+          bulletPoints.push(fallback);
+        }
+        fallbackIndex++;
+      }
+      
+      // If we still don't have enough, add simple numbered features
+      while (bulletPoints.length < count) {
+        bulletPoints.push(`Feature ${bulletPoints.length + 1}: Quality design and construction`);
+      }
     }
     
     return bulletPoints;
   } catch (error) {
     console.error(`Error generating bullet points for product ${product.product_id}:`, error);
-    // Return default bullet points as fallback
-    return [
-      "Durable construction",
-      "Easy to use",
-      "Versatile application",
-      "High-quality materials",
-      "Satisfaction guaranteed"
-    ].slice(0, count);
+    
+    // Create fallback bullet points with some specificity if possible
+    const fallbacks = [];
+    
+    if (product.brand) fallbacks.push(`Made by ${product.brand} with attention to quality and detail`);
+    if (product.material) fallbacks.push(`Constructed from durable ${product.material} for long-lasting performance`);
+    if (product.color) fallbacks.push(`Available in ${product.color} to match your style preferences`);
+    if (product.dimensions) fallbacks.push(`Perfect size at ${product.dimensions} for convenient use`);
+    if (product.category) fallbacks.push(`Designed specifically for ${product.category} applications`);
+    
+    // Add generic fallbacks if needed
+    const genericFallbacks = [
+      "Durable construction designed for long-lasting use",
+      "Intuitive design makes it easy to use right out of the box",
+      "Versatile application suitable for multiple purposes",
+      "Made with high-quality materials for superior performance",
+      "Satisfaction guaranteed with excellent customer service"
+    ];
+    
+    // Combine specific and generic fallbacks to reach the desired count
+    const combinedFallbacks = [...fallbacks, ...genericFallbacks].slice(0, count);
+    
+    // If we still don't have enough, add simple numbered features
+    while (combinedFallbacks.length < count) {
+      combinedFallbacks.push(`Quality and reliability in every aspect`);
+    }
+    
+    return combinedFallbacks;
   }
 }
 
