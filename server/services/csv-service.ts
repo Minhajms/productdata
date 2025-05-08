@@ -48,7 +48,7 @@ export async function parseCSV(csvString: string): Promise<Product[]> {
           reject(new Error(`Failed to parse CSV: ${error}`));
         }
       },
-      error: (error) => {
+      error: (error: Papa.ParseError) => {
         reject(new Error(`Failed to parse CSV: ${error.message}`));
       }
     });
@@ -244,8 +244,8 @@ function mapCSVRowToProduct(row: any, product: Product, csvStructure: any): void
       // Extract numeric part if the price has currency symbols
       const numericPrice = strValue.replace(/[^0-9.]/g, '');
       const price = parseFloat(numericPrice);
-      // Store as number since our schema now uses decimal type
-      product.price = isNaN(price) ? null : price;
+      // Store as string (will be handled as decimal in the database)
+      product.price = isNaN(price) ? null : String(price);
     } else if (mappedField === 'images') {
       // Check for different image separators (semicolon, comma, space)
       if (strValue.includes(';')) {
