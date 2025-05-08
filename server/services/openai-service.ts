@@ -50,12 +50,20 @@ export async function enhanceProductDataWithOpenAI(products: any[], marketplace:
         ['title', 'description', 'bullet_points', 'category'].includes(field.toLowerCase().replace(/\s+/g, '_'))
       );
       
-      if (significantFieldsMissing) {
+      // Determine how much information we have about the product
+      const hasTitle = product.title && product.title.length > 3;
+      const hasDescription = product.description && product.description.length > 10;
+      const hasBulletPoints = product.bullet_points && product.bullet_points.length > 0;
+      const hasCategory = product.category && product.category.length > 0;
+      
+      const infoScore = (hasTitle ? 1 : 0) + (hasDescription ? 2 : 0) + (hasBulletPoints ? 1 : 0) + (hasCategory ? 1 : 0);
+      const needsResearch = infoScore < 3 || (!hasTitle && !hasDescription);
+      
+      if (significantFieldsMissing && needsResearch) {
         try {
+          console.log(`Starting advanced product research for ${product.product_id} (info score: ${infoScore}/5)`);
           productResearch = await researchProduct(product);
-          console.log(`Product research completed for ${product.product_id}:`, 
-            productResearch ? productResearch.product_type : 'No research data'
-          );
+          console.log(`Product research completed for ${product.product_id}: ${productResearch ? productResearch.product_type : 'No research data'}`);
         } catch (researchError) {
           console.warn(`Error researching product ${product.product_id}:`, researchError);
           // Continue even if research fails
@@ -67,10 +75,22 @@ export async function enhanceProductDataWithOpenAI(products: any[], marketplace:
       
       // Apply product research insights if available
       if (productResearch) {
+        console.log(`Applying research insights for product ${product.product_id}`);
+        
         // If we don't have a category yet, use the researched product type
         if (!enhancedProduct.category && productResearch.product_type) {
           enhancedProduct.category = productResearch.product_type;
+          console.log(`Applied research category: ${productResearch.product_type}`);
         }
+        
+        // Store research data for later use in API calls
+        enhancedProduct._research = {
+          product_type: productResearch.product_type,
+          likely_features: productResearch.likely_features,
+          target_audience: productResearch.target_audience,
+          search_terms: productResearch.search_terms,
+          enhanced_understanding: productResearch.enhanced_understanding
+        };
       }
       
       // Process each missing field
@@ -79,28 +99,33 @@ export async function enhanceProductDataWithOpenAI(products: any[], marketplace:
         
         try {
           // Generate content based on field type
+          // Pass the enhanced product (with research data) to the generation functions
+          const productWithResearch = enhancedProduct._research 
+            ? { ...product, _research: enhancedProduct._research }
+            : product;
+            
           if (normalizedField === 'title') {
             enhancedProduct.title = await generateTitleWithOpenAI(
-              product, 
+              productWithResearch, 
               marketplace, 
               marketplaceConfig.formatGuidelines.title?.maxLength || 200
             );
           } else if (normalizedField === 'description') {
             enhancedProduct.description = await generateDescriptionWithOpenAI(
-              product, 
+              productWithResearch, 
               marketplace,
               marketplaceConfig.formatGuidelines.description?.maxLength || 2000
             );
           } else if (normalizedField === 'bullet_points') {
             enhancedProduct.bullet_points = await generateBulletPointsWithOpenAI(
-              product, 
+              productWithResearch, 
               marketplace,
               marketplaceConfig.formatGuidelines.bullet_points?.count || 5
             );
           } else if (normalizedField === 'brand' && !product.brand) {
-            enhancedProduct.brand = await suggestBrandWithOpenAI(product);
+            enhancedProduct.brand = await suggestBrandWithOpenAI(productWithResearch);
           } else if (normalizedField === 'category' && !product.category) {
-            enhancedProduct.category = await suggestCategoryWithOpenAI(product, marketplace);
+            enhancedProduct.category = await suggestCategoryWithOpenAI(productWithResearch, marketplace);
           } else if (normalizedField === 'asin' && marketplace === 'Amazon' && !product.asin) {
             enhancedProduct.asin = generateRandomASIN();
           }
@@ -341,9 +366,11 @@ async function callOpenAIAPI(
  */
 async function generateTitleWithOpenAI(product: any, marketplace: string, maxLength: number): Promise<string> {
   try {
-    // First, try to research the product if we don't have enough context
-    let productResearch = null;
-    if (!product.title || !product.description || !product.category) {
+    // Check if we already have research data from previous steps
+    let productResearch = product._research || null;
+    
+    // If no research data is available, try to perform research
+    if (!productResearch && (!product.title || !product.description || !product.category)) {
       try {
         productResearch = await researchProduct(product);
       } catch (error) {
@@ -597,19 +624,35 @@ async function generateDescriptionWithOpenAI(product: any, marketplace: string, 
  */
 async function generateBulletPointsWithOpenAI(product: any, marketplace: string, count: number): Promise<string[]> {
   try {
+    // First, try to research the product if we don't have enough context
+    let productResearch = null;
+    if (!product.bullet_points || product.bullet_points.length < 2 || !product.description) {
+      try {
+        productResearch = await researchProduct(product);
+      } catch (error) {
+        console.warn("Error researching product for bullet points generation:", error);
+      }
+    }
+    
     // Gather all available product information for better context
     const existingInfo = {
       product_id: product.product_id,
       title: product.title,
       description: product.description,
       brand: product.brand,
-      category: product.category,
+      category: product.category || (productResearch ? productResearch.product_type : null),
       price: product.price,
       dimensions: product.dimensions,
       weight: product.weight,
       material: product.material,
       color: product.color,
-      current_bullet_points: product.bullet_points || []
+      current_bullet_points: product.bullet_points || [],
+      research: productResearch ? {
+        product_type: productResearch.product_type,
+        likely_features: productResearch.likely_features,
+        target_audience: productResearch.target_audience,
+        search_terms: productResearch.search_terms
+      } : null
     };
     
     // Create marketplace-specific bullet point guidance
@@ -759,14 +802,29 @@ async function generateBulletPointsWithOpenAI(product: any, marketplace: string,
  */
 async function suggestBrandWithOpenAI(product: any): Promise<string> {
   try {
+    // First, try to research the product if we don't have enough context
+    let productResearch = null;
+    if (!product.brand && (!product.title || !product.description)) {
+      try {
+        productResearch = await researchProduct(product);
+      } catch (error) {
+        console.warn("Error researching product for brand suggestion:", error);
+      }
+    }
+    
     // Gather all available product information for better context
     const existingInfo = {
       product_id: product.product_id,
       title: product.title,
       description: product.description,
-      category: product.category,
+      category: product.category || (productResearch ? productResearch.product_type : null),
       bullet_points: product.bullet_points || [],
-      current_brand: product.brand
+      current_brand: product.brand,
+      research: productResearch ? {
+        product_type: productResearch.product_type,
+        target_audience: productResearch.target_audience,
+        enhanced_understanding: productResearch.enhanced_understanding
+      } : null
     };
     
     const prompt = `
@@ -836,6 +894,16 @@ async function suggestBrandWithOpenAI(product: any): Promise<string> {
  */
 async function suggestCategoryWithOpenAI(product: any, marketplace: string): Promise<string> {
   try {
+    // First, try to research the product if we don't have enough context
+    let productResearch = null;
+    if (!product.category && (!product.title || !product.description)) {
+      try {
+        productResearch = await researchProduct(product);
+      } catch (error) {
+        console.warn("Error researching product for category suggestion:", error);
+      }
+    }
+    
     // Gather all available product information for better context
     const existingInfo = {
       product_id: product.product_id,
@@ -847,7 +915,13 @@ async function suggestCategoryWithOpenAI(product: any, marketplace: string): Pro
       weight: product.weight,
       material: product.material,
       color: product.color,
-      current_category: product.category
+      current_category: product.category,
+      research: productResearch ? {
+        product_type: productResearch.product_type,
+        likely_features: productResearch.likely_features,
+        target_audience: productResearch.target_audience,
+        enhanced_understanding: productResearch.enhanced_understanding
+      } : null
     };
     
     // Create marketplace-specific category guidance
