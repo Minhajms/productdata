@@ -24,10 +24,15 @@ const REFERER_URL = 'https://productdataenhancer.app';
  * Enhance product data using OpenRouter API
  * @param products Array of product objects to enhance
  * @param marketplace Target marketplace
+ * @param modelPreference Preferred model to use (e.g., 'gpt4o', 'claude', etc.)
  * @returns Array of enhanced product objects
  */
-export async function enhanceProductDataWithOpenRouter(products: Product[], marketplace: string): Promise<Product[]> {
-  console.log(`Enhancing ${products.length} products for ${marketplace} marketplace using OpenRouter`);
+export async function enhanceProductDataWithOpenRouter(
+  products: Product[], 
+  marketplace: string, 
+  modelPreference: string = 'gpt4o'
+): Promise<Product[]> {
+  console.log(`Enhancing ${products.length} products for ${marketplace} marketplace using OpenRouter with ${modelPreference} model`);
   
   const enhancedProducts: Product[] = [];
   

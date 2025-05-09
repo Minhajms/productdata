@@ -511,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const aiAnalysis = await analyzeProductData(productsToAnalyze);
           
           // Then detect specific product types
-          const productTypeInfo = await detectProductTypes(aiAnalysis.products);
+          const productTypeInfo = await detectProductTypes(aiAnalysis.mappedProducts);
           
           // Generate a marketplace-specific enhancement prompt for this product type
           const marketplace = req.body.marketplace || 'amazon';
