@@ -1,341 +1,464 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Sparkles, FileText, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 
 interface TransformationAnimationProps {
   originalData: {
-    title?: string;
-    description?: string;
-    bulletPoints?: string[];
-    [key: string]: any;
+    title: string;
+    description: string;
+    bulletPoints: string[];
   };
   enhancedData: {
-    title?: string;
-    description?: string;
-    bulletPoints?: string[];
-    [key: string]: any;
+    title: string;
+    description: string;
+    bullet_points: string[];
   };
-  isPlaying?: boolean;
-  onComplete?: () => void;
-  speed?: "slow" | "medium" | "fast";
+  isPlaying: boolean;
+  speed?: 'slow' | 'medium' | 'fast';
+  fieldToAnimate?: 'all' | 'title' | 'description' | 'bulletPoints';
   highlightChanges?: boolean;
-  fieldToAnimate?: string;
+  onComplete?: () => void;
 }
 
+/**
+ * A component that animates the transformation of product data
+ * showing how the AI enhances raw data into polished marketplace content
+ */
 export function TransformationAnimation({
   originalData,
   enhancedData,
-  isPlaying = true,
-  onComplete,
-  speed = "medium",
+  isPlaying,
+  speed = 'medium',
+  fieldToAnimate = 'all',
   highlightChanges = true,
-  fieldToAnimate = "all",
+  onComplete
 }: TransformationAnimationProps) {
-  const [stage, setStage] = useState<"original" | "transforming" | "enhanced" | "complete">(
-    "original"
-  );
-  const [currentField, setCurrentField] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-
-  // Timing configurations based on speed setting
-  const timings = {
-    slow: { initial: 1500, field: 2000, between: 800 },
-    medium: { initial: 800, field: 1400, between: 500 },
-    fast: { initial: 400, field: 800, between: 300 },
+  // States for each transforming field
+  const [titleState, setTitleState] = useState(originalData.title);
+  const [descriptionState, setDescriptionState] = useState(originalData.description);
+  const [bulletPointsState, setBulletPointsState] = useState<string[]>(originalData.bulletPoints);
+  
+  // Animation timing states
+  const [animationPhase, setAnimationPhase] = useState(0);
+  const [sparkleEffects, setSparkleEffects] = useState<{ x: number, y: number }[]>([]);
+  
+  // Speed settings (in ms)
+  const speedSettings = {
+    slow: { charDelay: 60, phaseDelay: 1000 },
+    medium: { charDelay: 30, phaseDelay: 700 },
+    fast: { charDelay: 15, phaseDelay: 500 }
   };
   
-  const currentTimings = timings[speed];
-
-  // Fields to animate in sequence
-  const fieldsToAnimate = 
-    fieldToAnimate === "all" 
-      ? ["title", "description", "bulletPoints"]
-      : [fieldToAnimate];
-
+  const { charDelay, phaseDelay } = speedSettings[speed];
+  
+  // Function to add sparkling effect at random positions
+  const addSparkle = () => {
+    const newSparkle = {
+      x: Math.random() * 100,
+      y: Math.random() * 100
+    };
+    
+    setSparkleEffects(prev => [...prev, newSparkle]);
+    
+    // Remove the sparkle after animation completes
+    setTimeout(() => {
+      setSparkleEffects(prev => prev.filter(s => s !== newSparkle));
+    }, 1000);
+  };
+  
+  // Function to gradually transform text from original to enhanced
+  const animateTextTransformation = (
+    original: string, 
+    enhanced: string, 
+    stateSetter: React.Dispatch<React.SetStateAction<string>>,
+    onFinish: () => void
+  ) => {
+    // If they're exactly the same, no need to animate
+    if (original === enhanced) {
+      stateSetter(enhanced);
+      onFinish();
+      return;
+    }
+    
+    let currentText = original;
+    let currentIndex = 0;
+    const maxLen = Math.max(original.length, enhanced.length);
+    
+    // Function to process one character at a time
+    const processNextChar = () => {
+      if (currentIndex >= maxLen) {
+        onFinish();
+        return;
+      }
+      
+      // Add random sparkle effect occasionally
+      if (Math.random() > 0.8) {
+        addSparkle();
+      }
+      
+      // Calculate how much to change the text
+      let charsToReplace = Math.min(
+        1 + Math.floor(Math.random() * 3),
+        enhanced.length - currentIndex
+      );
+      
+      // Get current text up to the current position
+      const prefix = enhanced.substring(0, currentIndex);
+      
+      // Get the new segment to add
+      const newSegment = enhanced.substring(currentIndex, currentIndex + charsToReplace);
+      
+      // Get the remaining text from the original
+      // This creates the effect of progressively replacing the original text
+      const remainingSuffix = currentText.substring(currentIndex + charsToReplace);
+      
+      // Combine the parts
+      currentText = prefix + newSegment + remainingSuffix;
+      stateSetter(currentText);
+      
+      // Move to next position
+      currentIndex += charsToReplace;
+      
+      // Continue animation if not complete
+      if (currentIndex < maxLen) {
+        setTimeout(processNextChar, charDelay);
+      } else {
+        // Ensure we end with the exact enhanced text
+        stateSetter(enhanced);
+        onFinish();
+      }
+    };
+    
+    // Start the animation process
+    processNextChar();
+  };
+  
+  // Function to animate bullet points transformation
+  const animateBulletPointsTransformation = (
+    original: string[], 
+    enhanced: string[], 
+    stateSetter: React.Dispatch<React.SetStateAction<string[]>>,
+    onFinish: () => void
+  ) => {
+    // Create a working copy for transformation
+    let currentBullets = [...original];
+    
+    // Ensure we have enough bullet points (pad with empty strings if needed)
+    while (currentBullets.length < enhanced.length) {
+      currentBullets.push('');
+    }
+    
+    // Animate each bullet point sequentially
+    const animateBullet = (bulletIndex: number) => {
+      if (bulletIndex >= enhanced.length) {
+        onFinish();
+        return;
+      }
+      
+      // Animate this specific bullet point
+      const originalBullet = currentBullets[bulletIndex] || '';
+      const enhancedBullet = enhanced[bulletIndex] || '';
+      
+      let currentText = originalBullet;
+      let currentCharIndex = 0;
+      const maxLen = Math.max(originalBullet.length, enhancedBullet.length);
+      
+      // Process one character at a time for this bullet
+      const processNextChar = () => {
+        if (currentCharIndex >= maxLen) {
+          // Move to next bullet point
+          setTimeout(() => animateBullet(bulletIndex + 1), phaseDelay);
+          return;
+        }
+        
+        // Add random sparkle effect occasionally
+        if (Math.random() > 0.8) {
+          addSparkle();
+        }
+        
+        // Calculate how much to change
+        let charsToReplace = Math.min(
+          1 + Math.floor(Math.random() * 3),
+          enhancedBullet.length - currentCharIndex
+        );
+        
+        // Get current text up to current position
+        const prefix = enhancedBullet.substring(0, currentCharIndex);
+        
+        // Get new segment to add
+        const newSegment = enhancedBullet.substring(currentCharIndex, currentCharIndex + charsToReplace);
+        
+        // Get remaining from original
+        const remainingSuffix = currentText.substring(currentCharIndex + charsToReplace);
+        
+        // Combine parts
+        currentText = prefix + newSegment + remainingSuffix;
+        
+        // Update the specific bullet point
+        const updatedBullets = [...currentBullets];
+        updatedBullets[bulletIndex] = currentText;
+        currentBullets = updatedBullets;
+        stateSetter(updatedBullets);
+        
+        // Move to next position
+        currentCharIndex += charsToReplace;
+        
+        // Continue animation if not complete
+        if (currentCharIndex < maxLen) {
+          setTimeout(processNextChar, charDelay);
+        } else {
+          // Ensure we end with exact enhanced text for this bullet
+          const finalBullets = [...currentBullets];
+          finalBullets[bulletIndex] = enhancedBullet;
+          currentBullets = finalBullets;
+          stateSetter(finalBullets);
+          
+          // Move to next bullet
+          setTimeout(() => animateBullet(bulletIndex + 1), phaseDelay);
+        }
+      };
+      
+      // Start animating this bullet
+      processNextChar();
+    };
+    
+    // Start with the first bullet
+    animateBullet(0);
+  };
+  
+  // Start the animation sequence when isPlaying becomes true
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
     if (isPlaying) {
-      // Start with original data
-      setStage("original");
-      setProgress(0);
+      // Reset all states to original
+      setTitleState(originalData.title);
+      setDescriptionState(originalData.description);
+      setBulletPointsState(originalData.bulletPoints);
+      setAnimationPhase(0);
+      setSparkleEffects([]);
       
-      // Wait a bit to show original data
-      timer = setTimeout(() => {
-        // Start transformation
-        setStage("transforming");
-        setProgress(10);
+      // Start the animation sequence
+      const startAnimation = () => {
+        // Determine which fields to animate
+        const shouldAnimateTitle = fieldToAnimate === 'all' || fieldToAnimate === 'title';
+        const shouldAnimateDescription = fieldToAnimate === 'all' || fieldToAnimate === 'description';
+        const shouldAnimateBullets = fieldToAnimate === 'all' || fieldToAnimate === 'bulletPoints';
         
-        // Animate each field in sequence
-        fieldsToAnimate.forEach((field, index) => {
-          setTimeout(() => {
-            setCurrentField(field);
-            setProgress(10 + ((index + 1) / fieldsToAnimate.length) * 70);
-          }, currentTimings.initial + (index * (currentTimings.field + currentTimings.between)));
-        });
-        
-        // After all fields are transformed, show completed view
-        setTimeout(() => {
-          setStage("enhanced");
-          setProgress(90);
-          
-          // Complete the animation
-          setTimeout(() => {
-            setStage("complete");
-            setProgress(100);
-            if (onComplete) onComplete();
-          }, currentTimings.between);
-        }, currentTimings.initial + (fieldsToAnimate.length * (currentTimings.field + currentTimings.between)));
-      }, currentTimings.initial);
-    }
-    
-    return () => clearTimeout(timer);
-  }, [isPlaying, fieldsToAnimate.length, currentTimings, onComplete]);
-
-  // Animation variants for elements
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.5 } },
-  };
-  
-  const fieldVariants = {
-    original: { x: 0, opacity: 1 },
-    transforming: { opacity: 0.5, scale: 0.95, transition: { duration: 0.3 } },
-    exit: { x: -20, opacity: 0, transition: { duration: 0.3 } },
-  };
-  
-  const enhancedVariants = {
-    hidden: { x: 20, opacity: 0 },
-    visible: { x: 0, opacity: 1, transition: { duration: 0.3 } },
-  };
-  
-  const sparkleVariants = {
-    hidden: { opacity: 0, scale: 0 },
-    visible: { 
-      opacity: [0, 1, 0.8, 1, 0],
-      scale: [0, 1.2, 1, 1.1, 0],
-      transition: { duration: 2, times: [0, 0.2, 0.4, 0.6, 1] }
-    },
-  };
-
-  const renderFieldContent = (field: string, data: any, isEnhanced: boolean = false) => {
-    switch (field) {
-      case "title":
-        return (
-          <div className={`text-lg font-medium ${isEnhanced ? "text-blue-700" : "text-gray-700"}`}>
-            {data.title || "No title available"}
-          </div>
-        );
+        // Phase 1: Animate the title
+        if (shouldAnimateTitle) {
+          setAnimationPhase(1);
+          animateTextTransformation(
+            originalData.title,
+            enhancedData.title,
+            setTitleState,
+            () => {
+              // When title animation is complete, move to description
+              setTimeout(() => {
+                if (shouldAnimateDescription) {
+                  setAnimationPhase(2);
+                  animateTextTransformation(
+                    originalData.description,
+                    enhancedData.description,
+                    setDescriptionState,
+                    () => {
+                      // When description is complete, move to bullet points
+                      setTimeout(() => {
+                        if (shouldAnimateBullets) {
+                          setAnimationPhase(3);
+                          animateBulletPointsTransformation(
+                            originalData.bulletPoints,
+                            enhancedData.bullet_points,
+                            setBulletPointsState,
+                            () => {
+                              // All animations complete
+                              setAnimationPhase(4);
+                              if (onComplete) onComplete();
+                            }
+                          );
+                        } else {
+                          // Skip bullet points
+                          setAnimationPhase(4);
+                          if (onComplete) onComplete();
+                        }
+                      }, phaseDelay);
+                    }
+                  );
+                } else if (shouldAnimateBullets) {
+                  // Skip description, go to bullets
+                  setAnimationPhase(3);
+                  animateBulletPointsTransformation(
+                    originalData.bulletPoints,
+                    enhancedData.bullet_points,
+                    setBulletPointsState,
+                    () => {
+                      // All animations complete
+                      setAnimationPhase(4);
+                      if (onComplete) onComplete();
+                    }
+                  );
+                } else {
+                  // Skip both description and bullets
+                  setAnimationPhase(4);
+                  if (onComplete) onComplete();
+                }
+              }, phaseDelay);
+            }
+          );
+        } else if (shouldAnimateDescription) {
+          // Skip title, start with description
+          setAnimationPhase(2);
+          animateTextTransformation(
+            originalData.description,
+            enhancedData.description,
+            setDescriptionState,
+            () => {
+              setTimeout(() => {
+                if (shouldAnimateBullets) {
+                  setAnimationPhase(3);
+                  animateBulletPointsTransformation(
+                    originalData.bulletPoints,
+                    enhancedData.bullet_points,
+                    setBulletPointsState,
+                    () => {
+                      setAnimationPhase(4);
+                      if (onComplete) onComplete();
+                    }
+                  );
+                } else {
+                  setAnimationPhase(4);
+                  if (onComplete) onComplete();
+                }
+              }, phaseDelay);
+            }
+          );
+        } else if (shouldAnimateBullets) {
+          // Skip title and description, start with bullets
+          setAnimationPhase(3);
+          animateBulletPointsTransformation(
+            originalData.bulletPoints,
+            enhancedData.bullet_points,
+            setBulletPointsState,
+            () => {
+              setAnimationPhase(4);
+              if (onComplete) onComplete();
+            }
+          );
+        } else {
+          // Nothing to animate
+          setAnimationPhase(4);
+          if (onComplete) onComplete();
+        }
+      };
       
-      case "description":
-        return (
-          <div className={`text-sm ${isEnhanced ? "text-gray-700" : "text-gray-600"}`}>
-            {data.description || "No description available"}
-          </div>
-        );
-        
-      case "bulletPoints":
-        return (
-          <ul className="list-disc pl-5 space-y-1 text-sm">
-            {Array.isArray(data.bulletPoints) && data.bulletPoints.length > 0 ? (
-              data.bulletPoints.map((point: string, idx: number) => (
-                <li key={idx} className={isEnhanced ? "text-gray-700" : "text-gray-600"}>
-                  {point}
-                </li>
-              ))
-            ) : (
-              <li className="text-gray-500 italic">No bullet points available</li>
-            )}
-          </ul>
-        );
-        
-      default:
-        return <div>Unknown field type</div>;
+      // Start the animation sequence after a short delay
+      setTimeout(startAnimation, 500);
     }
-  };
-
-  const getLabelForField = (field: string): string => {
-    switch (field) {
-      case "title": return "Product Title";
-      case "description": return "Product Description";
-      case "bulletPoints": return "Feature Bullets";
-      default: return field.charAt(0).toUpperCase() + field.slice(1);
-    }
-  };
-
-  // Helper to highlight differences in text
-  const getHighlightedText = (text: string, isEnhanced: boolean) => {
-    if (!highlightChanges || !isEnhanced) return text;
-    
-    // Simple highlighting for demonstration purposes
-    // In a real app, you would use a diff algorithm to identify changes
-    return text;
-  };
-
+  }, [isPlaying, originalData, enhancedData, fieldToAnimate, speed, charDelay, phaseDelay, onComplete]);
+  
+  // Determine which sections to show based on fieldToAnimate
+  const showTitle = fieldToAnimate === 'all' || fieldToAnimate === 'title';
+  const showDescription = fieldToAnimate === 'all' || fieldToAnimate === 'description';
+  const showBulletPoints = fieldToAnimate === 'all' || fieldToAnimate === 'bulletPoints';
+  
   return (
-    <div className="relative">
-      {/* Progress bar at top */}
-      {(stage === "transforming" || stage === "enhanced") && (
-        <div className="mb-4">
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>Transforming Product Data</span>
-            <span>{Math.floor(progress)}%</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <motion.div 
-              className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-            />
-          </div>
-        </div>
-      )}
+    <div className="relative bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+      {/* Sparkle effects */}
+      {sparkleEffects.map((sparkle, i) => (
+        <motion.div
+          key={`sparkle-${i}`}
+          className="absolute"
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: [0, 1, 0], scale: [0.5, 1.5, 0.5] }}
+          transition={{ duration: 1 }}
+          style={{ left: `${sparkle.x}%`, top: `${sparkle.y}%` }}
+        >
+          <Sparkles className="text-blue-500 h-6 w-6" />
+        </motion.div>
+      ))}
       
-      {/* Main transformation container */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {/* Original data side */}
-        <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center mb-3">
-            <FileText className="h-5 w-5 text-gray-400 mr-2" />
-            <h3 className="text-sm font-medium text-gray-700">Original Data</h3>
-          </div>
-          
-          <div className="space-y-4">
-            {fieldsToAnimate.map((field) => (
-              <div key={`original-${field}`} className="space-y-1">
-                <h4 className="text-xs uppercase tracking-wider text-gray-500">
-                  {getLabelForField(field)}
-                </h4>
-                
-                <AnimatePresence mode="wait">
-                  {(stage === "original" || (stage === "transforming" && currentField !== field)) && (
-                    <motion.div
-                      key={`original-content-${field}`}
-                      variants={fieldVariants}
-                      initial="original"
-                      animate={currentField === field ? "transforming" : "original"}
-                      exit="exit"
-                      className="min-h-[40px]"
-                    >
-                      {renderFieldContent(field, originalData)}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
+      <div className="p-6 space-y-6">
+        {/* Animation phase indicator */}
+        <div className="mb-4 flex justify-center">
+          <div className="flex gap-2">
+            <div className={`h-2 w-2 rounded-full ${animationPhase >= 1 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
+            <div className={`h-2 w-2 rounded-full ${animationPhase >= 2 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
+            <div className={`h-2 w-2 rounded-full ${animationPhase >= 3 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
+            <div className={`h-2 w-2 rounded-full ${animationPhase >= 4 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
           </div>
         </div>
         
-        {/* Arrow and transformation animation */}
-        <div className="hidden md:flex items-center justify-center absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-          <div className="bg-white rounded-full p-3 shadow-lg">
-            <ArrowRight className="h-6 w-6 text-blue-600" />
-          </div>
-          
-          {stage === "transforming" && currentField && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              variants={sparkleVariants}
-              initial="hidden"
-              animate="visible"
-              key={`spark-${currentField}`}
-            >
-              <Sparkles className="h-12 w-12 text-yellow-400" />
-            </motion.div>
-          )}
-        </div>
-        
-        {/* Enhanced data side */}
-        <div className={`bg-white p-5 rounded-lg border shadow-sm ${stage !== "original" ? "border-blue-200" : "border-gray-200"}`}>
-          <div className="flex items-center mb-3">
-            <div className={`flex items-center justify-center h-5 w-5 mr-2 ${stage === "complete" ? "text-green-500" : "text-blue-500"}`}>
-              {stage === "complete" ? (
-                <CheckCircle2 className="h-5 w-5" />
-              ) : (
-                <Sparkles className="h-5 w-5" />
-              )}
+        {/* Title transformation */}
+        {showTitle && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-500">
+              {animationPhase === 1 ? 'Enhancing title...' : 'Product Title'}
             </div>
-            <h3 className="text-sm font-medium text-gray-700">
-              {stage === "complete" ? "Enhanced Data" : "AI Transformation"}
-            </h3>
+            <div 
+              className={`p-4 rounded-md ${
+                animationPhase === 1 
+                  ? 'bg-blue-50 border border-blue-100' 
+                  : 'bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <h3 className="text-lg font-semibold text-gray-900">
+                {titleState}
+              </h3>
+            </div>
           </div>
-          
-          <div className="space-y-4">
-            {fieldsToAnimate.map((field) => (
-              <div key={`enhanced-${field}`} className="space-y-1">
-                <h4 className="text-xs uppercase tracking-wider text-gray-500">
-                  {getLabelForField(field)}
-                </h4>
-                
-                <AnimatePresence mode="wait">
-                  {(stage === "original" || (stage === "transforming" && currentField !== field)) && (
-                    <motion.div
-                      key={`placeholder-${field}`}
-                      initial={{ opacity: 0.5 }}
-                      className="min-h-[40px] flex items-center justify-center"
-                    >
-                      <div className="h-4 w-full bg-gray-100 rounded animate-pulse"></div>
-                    </motion.div>
-                  )}
-                  
-                  {((stage === "transforming" && currentField === field) || 
-                    stage === "enhanced" || 
-                    stage === "complete") && (
-                    <motion.div
-                      key={`enhanced-content-${field}`}
-                      variants={enhancedVariants}
-                      initial="hidden"
-                      animate="visible"
-                      className={`min-h-[40px] ${currentField === field ? "bg-blue-50 p-2 rounded-md border border-blue-100" : ""}`}
-                    >
-                      {renderFieldContent(field, enhancedData, true)}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
+        )}
+        
+        {/* Description transformation */}
+        {showDescription && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-500">
+              {animationPhase === 2 ? 'Creating compelling description...' : 'Product Description'}
+            </div>
+            <div 
+              className={`p-4 rounded-md ${
+                animationPhase === 2 
+                  ? 'bg-blue-50 border border-blue-100' 
+                  : 'bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {descriptionState}
+              </p>
+            </div>
           </div>
+        )}
+        
+        {/* Bullet points transformation */}
+        {showBulletPoints && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-500">
+              {animationPhase === 3 ? 'Generating key feature highlights...' : 'Key Features'}
+            </div>
+            <div 
+              className={`p-4 rounded-md ${
+                animationPhase === 3 
+                  ? 'bg-blue-50 border border-blue-100' 
+                  : 'bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <ul className="list-disc pl-5 space-y-2">
+                {bulletPointsState.map((point, index) => (
+                  <li key={index} className="text-gray-700">
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+        
+        {/* Animation phase message */}
+        <div className="text-center text-sm text-gray-500 italic mt-4">
+          {animationPhase === 0 && "Preparing for enhancement..."}
+          {animationPhase === 1 && "Creating an attention-grabbing title..."}
+          {animationPhase === 2 && "Crafting a detailed, persuasive description..."}
+          {animationPhase === 3 && "Highlighting key product features and benefits..."}
+          {animationPhase === 4 && "Enhancement complete! Your product is marketplace-ready."}
         </div>
-      </motion.div>
-      
-      {/* Mobile arrow indicator - only show on small screens */}
-      <div className="md:hidden flex justify-center my-4">
-        <motion.div 
-          className="rounded-full bg-blue-100 p-2"
-          animate={{
-            y: [0, -5, 0],
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            repeatType: "reverse",
-          }}
-        >
-          <ArrowRight className="h-6 w-6 text-blue-600 transform rotate-90" />
-        </motion.div>
       </div>
-      
-      {/* Completion indicator */}
-      {stage === "complete" && (
-        <motion.div 
-          className="mt-4 p-3 bg-green-50 rounded-md border border-green-100 text-sm text-green-800 flex items-center"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <CheckCircle2 className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-          <p>
-            Product data enhancement complete. All fields have been optimized for better marketplace performance.
-          </p>
-        </motion.div>
-      )}
     </div>
   );
 }
-
-export default TransformationAnimation;

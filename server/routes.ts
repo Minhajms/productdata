@@ -10,6 +10,7 @@ import { enhanceProductDataWithImprovedPrompts } from "./services/enhanced-opena
 import { enhanceProductDataWithAnthropic } from "./services/anthropic-service";
 import { enhanceProductDataWithOpenRouter } from "./services/openrouter-service";
 import { analyzeProductTypes } from "./services/product-detection-service";
+import { analyzeProductData, detectProductTypes, generateEnhancementPrompt } from "./services/intelligent-csv-analyzer";
 import { Product } from "@shared/schema";
 
 // Configure multer with increased file size limits (50MB)
@@ -32,11 +33,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse CSV content
       const fileContent = req.file.buffer.toString("utf8");
       
-      // Check if AI-enhanced parsing is requested
+      // Check what level of AI enhancement to use
       const useAI = req.body.useAI === 'true';
+      const useIntelligentAnalysis = req.body.useIntelligentAnalysis === 'true';
       let products;
       
-      if (useAI) {
+      if (useIntelligentAnalysis) {
+        console.log("Using intelligent CSV analysis with OpenRouter for advanced field detection");
+        try {
+          // First parse the CSV with basic parsing to get initial product array
+          const initialProducts = await parseCSV(fileContent);
+          
+          if (initialProducts.length === 0) {
+            throw new Error("No valid products found in CSV during initial parsing");
+          }
+          
+          // Then use intelligent analysis to improve the parsing
+          const intelligentAnalysis = await analyzeProductData(initialProducts);
+          products = intelligentAnalysis.products;
+          
+          console.log("Intelligent CSV analysis completed successfully");
+          console.log(`Detected product type: ${intelligentAnalysis.analysis.productType} (confidence: ${intelligentAnalysis.analysis.confidence.toFixed(2)})`);
+          console.log(`Field mappings applied: ${intelligentAnalysis.fieldMappings.length}`);
+          
+        } catch (aiError) {
+          console.error("Intelligent CSV analysis failed:", aiError);
+          console.log("Falling back to standard AI-enhanced CSV parsing");
+          
+          try {
+            products = await parseCSVWithAI(fileContent);
+          } catch (fallbackError) {
+            console.error("AI-enhanced CSV parsing also failed:", fallbackError);
+            console.log("Falling back to standard CSV parsing");
+            products = await parseCSV(fileContent);
+          }
+        }
+      } else if (useAI) {
         console.log("Using AI-enhanced CSV parsing");
         try {
           products = await parseCSVWithAI(fileContent);
@@ -46,6 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           products = await parseCSV(fileContent);
         }
       } else {
+        console.log("Using standard CSV parsing (no AI enhancement)");
         products = await parseCSV(fileContent);
       }
       
@@ -431,14 +464,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analyze products to detect product types and suggest improvements
   app.post("/api/analyze-products", async (req, res) => {
     try {
-      const { products, productIds } = req.body;
+      const { products, productIds, useIntelligentAnalysis = true } = req.body;
       let productsToAnalyze = [];
       
       console.log("Analyze endpoint called with:", {
         hasProducts: products && Array.isArray(products), 
         productsLength: products?.length || 0,
         hasProductIds: productIds && Array.isArray(productIds),
-        productIdsLength: productIds?.length || 0
+        productIdsLength: productIds?.length || 0,
+        useIntelligentAnalysis
       });
       
       // If productIds are provided, fetch those products from the database
@@ -465,13 +499,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Analyze product types and suggest enhancements
-      const analysis = await analyzeProductTypes(productsToAnalyze);
+      // Choose analysis method
+      let analysisResult;
       
-      res.json({
-        message: "Product analysis completed",
-        ...analysis
-      });
+      if (useIntelligentAnalysis) {
+        // Use new intelligent analyzer
+        try {
+          console.log("Using intelligent CSV analyzer for deep product analysis");
+          
+          // First, analyze products with our intelligent analyzer
+          const aiAnalysis = await analyzeProductData(productsToAnalyze);
+          
+          // Then detect specific product types
+          const productTypeInfo = await detectProductTypes(aiAnalysis.products);
+          
+          // Generate a marketplace-specific enhancement prompt for this product type
+          const marketplace = req.body.marketplace || 'amazon';
+          const enhancementPrompt = generateEnhancementPrompt(
+            productTypeInfo.productType || 'general',
+            marketplace
+          );
+          
+          // Combine everything into a comprehensive analysis
+          analysisResult = {
+            message: "Intelligent product analysis completed",
+            productType: productTypeInfo.productType || 'general',
+            confidence: productTypeInfo.confidence || 0.7,
+            analysis: aiAnalysis.analysis,
+            fieldMappings: aiAnalysis.fieldMappings,
+            enhancementSuggestions: productTypeInfo.enhancementFocus || [],
+            commonMissingFields: aiAnalysis.analysis.missingFields || [],
+            marketplaceCompatibility: aiAnalysis.analysis.marketplaceCompatibility || {},
+            enhancementPriorities: aiAnalysis.analysis.enhancementPriorities || [],
+            enhancementPrompt: enhancementPrompt,
+            productTypeInfo: productTypeInfo
+          };
+          
+          console.log("Intelligent analysis completed successfully");
+        } catch (aiError) {
+          console.error("Error in intelligent analysis:", aiError);
+          console.log("Falling back to standard product type analysis");
+          
+          // Fallback to original analyzer if intelligent analysis fails
+          const fallbackAnalysis = await analyzeProductTypes(productsToAnalyze);
+          analysisResult = {
+            message: "Product analysis completed (fallback method)",
+            intelligentAnalysisFailed: true,
+            error: aiError instanceof Error ? aiError.message : "Unknown error",
+            ...fallbackAnalysis
+          };
+        }
+      } else {
+        // Use original analyzer
+        console.log("Using standard product type analysis");
+        const standardAnalysis = await analyzeProductTypes(productsToAnalyze);
+        analysisResult = {
+          message: "Standard product analysis completed",
+          ...standardAnalysis
+        };
+      }
+      
+      res.json(analysisResult);
     } catch (error) {
       console.error("Error analyzing products:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
