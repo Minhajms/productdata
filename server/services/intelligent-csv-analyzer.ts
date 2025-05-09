@@ -8,6 +8,11 @@
 import axios from 'axios';
 import { Product } from '@shared/schema';
 
+// API key configuration
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// Analysis result interface
 interface AnalysisResult {
   productType: string;
   confidence: number;
@@ -29,6 +34,7 @@ interface AnalysisResult {
   enhancementPriorities: string[];
 }
 
+// Field mapping interface
 interface FieldMapping {
   originalField: string;
   standardField: string;
@@ -41,123 +47,145 @@ interface FieldMapping {
  */
 export async function analyzeProductData(products: any[]): Promise<{
   analysis: AnalysisResult;
+  mappedProducts: Product[];
   fieldMappings: FieldMapping[];
-  products: Product[];
 }> {
   try {
-    // Extract sample for analysis
-    const sampleSize = Math.min(products.length, 3);
-    const sampleProducts = products.slice(0, sampleSize);
+    console.log(`Analyzing ${products.length} products with intelligent analyzer`);
     
-    // Prepare sample data for analysis
-    const sampleData = JSON.stringify(sampleProducts, null, 2);
+    const sampleSize = Math.min(3, products.length);
+    const productSamples = products.slice(0, sampleSize);
     
-    // Create a system prompt for analysis
+    // Create system prompt for analysis
     const systemPrompt = `
-      You are an expert product data analyst for e-commerce. Your task is to analyze product data and identify:
-      1. The type of products (electronics, clothing, home goods, etc.)
-      2. Required fields for marketplace listings
-      3. Missing or incomplete fields that need enhancement
-      4. Recommendations for data improvement
-      
-      Please analyze the data structure and content carefully, considering:
-      - Standard fields required by major marketplaces
-      - The quality and completeness of existing data
-      - The type of products based on available fields
-      - How to map non-standard field names to standard ones
-      
-      Format your response as a valid JSON with the following structure:
-      {
-        "productType": "string", // The detected product category
-        "confidence": number, // Confidence in product type detection (0-1)
-        "detectedFields": [
-          {
-            "name": "string", // Field name
-            "importance": "high|medium|low",
-            "present": boolean,
-            "needsEnhancement": boolean
-          }
-        ],
-        "missingFields": ["string"], // Important fields that are entirely missing
-        "recommendedFields": ["string"], // Fields recommended for enhancement
-        "marketplaceCompatibility": {
-          "amazon": number, // Score from 0-1 for each marketplace
-          "ebay": number,
-          "walmart": number,
-          "shopify": number,
-          "etsy": number
-        },
-        "enhancementPriorities": ["string"], // Fields to prioritize for enhancement
-        "fieldMappings": [
-          {
-            "originalField": "string", // Original field name in CSV
-            "standardField": "string", // Standard field name to map to
-            "confidence": number // Confidence in mapping (0-1)
-          }
-        ]
-      }
-    `;
-    
-    // Example user prompt
-    const userPrompt = `
-      Analyze these product entries from a CSV file:
-      ${sampleData}
-      
-      Please identify the product type, required fields, missing fields, and provide field mappings.
-      Return your analysis in the JSON format specified.
-    `;
+You are an e-commerce product data expert specializing in marketplace listing optimization.
+Your task is to analyze product data and provide insights to help improve product listings.
+Based on the CSV data provided, determine the product type, identify missing fields, and recommend improvements.
+Respond in a structured JSON format that can be directly parsed by a program.
+`;
 
-    // Call the OpenRouter API for analysis
-    const openRouterResponse = await callOpenRouterAPI(systemPrompt, userPrompt);
+    // Create user prompt with product samples
+    const userPrompt = `
+Analyze the following product data samples from a CSV file:
+
+${JSON.stringify(productSamples, null, 2)}
+
+Based on this data:
+1. Determine the likely product type/category these items belong to
+2. Identify which standard e-commerce fields are present and which are missing
+3. Assess the data quality and fields that need enhancement
+4. Map the existing CSV column names to standard product fields
+5. Recommend marketplace-specific optimizations
+
+Respond with ONLY a JSON object with the following structure:
+{
+  "productType": "string",
+  "confidence": number (0-1),
+  "detectedFields": [
+    {
+      "name": "string",
+      "importance": "high|medium|low",
+      "present": boolean,
+      "needsEnhancement": boolean
+    }
+  ],
+  "missingFields": ["string"],
+  "recommendedFields": ["string"],
+  "fieldMappings": [
+    {
+      "originalField": "string",
+      "standardField": "string",
+      "confidence": number (0-1)
+    }
+  ],
+  "marketplaceCompatibility": {
+    "amazon": number (0-100),
+    "ebay": number (0-100),
+    "walmart": number (0-100),
+    "shopify": number (0-100),
+    "etsy": number (0-100)
+  },
+  "enhancementPriorities": ["string"]
+}
+`;
+
+    // Call OpenRouter API for analysis
+    const analysisResponse = await callOpenRouterAPI(systemPrompt, userPrompt);
+    const analysisData = extractJsonResponse(analysisResponse);
     
-    // Extract and parse the JSON response
-    const analysis = extractJsonResponse(openRouterResponse);
+    // Extract field mappings
+    const fieldMappings = analysisData.fieldMappings || detectFieldMappings(products);
     
-    // Apply the field mappings to standardize the products
-    const standardizedProducts = mapProductFields(products, analysis.fieldMappings);
+    // Map products based on detected mappings
+    const mappedProducts = mapProductFields(products, fieldMappings);
+    
+    // Remove fieldMappings from analysis result to match interface
+    const { fieldMappings: _, ...analysisResult } = analysisData;
     
     return {
-      analysis: analysis,
-      fieldMappings: analysis.fieldMappings,
-      products: standardizedProducts
+      analysis: analysisResult as AnalysisResult,
+      mappedProducts,
+      fieldMappings,
     };
   } catch (error) {
-    console.error('Error in intelligent CSV analysis:', error);
+    console.error('Error analyzing product data:', error);
     
-    // Provide a fallback analysis if AI analysis fails
+    // Fallback to basic analysis if AI analysis fails
+    console.log('Falling back to basic analysis');
+    const fieldMappings = detectFieldMappings(products);
+    const mappedProducts = mapProductFields(products, fieldMappings);
+    
     const fallbackAnalysis: AnalysisResult = {
-      productType: 'unknown',
+      productType: "generic",
       confidence: 0.5,
       detectedFields: getDefaultRequiredFields().map(field => ({
         name: field,
-        importance: 'high' as const,
-        present: products.some(p => p[field]),
+        importance: "high" as const,
+        present: mappedProducts.some(p => {
+          switch(field) {
+            case 'title': return !!p.title;
+            case 'description': return !!p.description;
+            case 'brand': return !!p.brand;
+            case 'price': return !!p.price;
+            case 'category': return !!p.category;
+            case 'bullet_points': return !!p.bullet_points;
+            case 'images': return !!p.images;
+            case 'asin': return !!p.asin;
+            default: return false;
+          }
+        }),
         needsEnhancement: true
       })),
-      missingFields: getDefaultRequiredFields().filter(field => 
-        !products.some(p => p[field] && p[field].length > 0)
+      missingFields: getDefaultRequiredFields().filter(
+        field => !mappedProducts.some(p => {
+          switch(field) {
+            case 'title': return !!p.title;
+            case 'description': return !!p.description;
+            case 'brand': return !!p.brand;
+            case 'price': return !!p.price;
+            case 'category': return !!p.category;
+            case 'bullet_points': return !!p.bullet_points;
+            case 'images': return !!p.images;
+            case 'asin': return !!p.asin;
+            default: return false;
+          }
+        })
       ),
       recommendedFields: getDefaultRequiredFields(),
       marketplaceCompatibility: {
-        amazon: 0.6,
-        ebay: 0.6,
-        walmart: 0.6,
-        shopify: 0.6,
-        etsy: 0.6
+        amazon: 60,
+        ebay: 70,
+        walmart: 60,
+        shopify: 80,
+        etsy: 40
       },
-      enhancementPriorities: ['title', 'description', 'bullet_points']
+      enhancementPriorities: ["title", "description", "bullet_points"]
     };
-    
-    // Fallback field mappings
-    const fallbackFieldMappings: FieldMapping[] = detectFieldMappings(products);
-    
-    // Apply fallback field mappings
-    const standardizedProducts = mapProductFields(products, fallbackFieldMappings);
     
     return {
       analysis: fallbackAnalysis,
-      fieldMappings: fallbackFieldMappings,
-      products: standardizedProducts
+      mappedProducts,
+      fieldMappings,
     };
   }
 }
@@ -169,43 +197,43 @@ export async function analyzeProductData(products: any[]): Promise<{
  */
 async function callOpenRouterAPI(systemPrompt: string, userPrompt: string): Promise<string> {
   try {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error('OPENROUTER_API_KEY environment variable is not set');
+    // Check if OpenRouter API key is available
+    if (!OPENROUTER_API_KEY) {
+      console.warn('OpenRouter API key not found, falling back to OpenAI');
+      return await tryOpenAIFallback(systemPrompt, userPrompt);
     }
     
+    // Call OpenRouter API
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'openai/gpt-4o-mini', // Using GPT-4o mini for cost-effective analysis
-        route: "fallback", // Will try other models if the first fails
+        model: 'anthropic/claude-3-7-sonnet-20250219', // Use the newest Anthropic model
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        response_format: { type: 'json_object' },
-        max_tokens: 3000,
+        max_tokens: 4000,
+        temperature: 0.3, // Lower temperature for more deterministic/analytical results
       },
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://productenhancer.com',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://productdataenhancer.app',
+          'X-Title': 'Product Data Enhancer'
         }
       }
     );
     
-    if (response.data && response.data.choices && response.data.choices.length > 0) {
+    // Extract and return the response content
+    if (response.data?.choices?.[0]?.message?.content) {
       return response.data.choices[0].message.content;
     } else {
-      throw new Error('Invalid response from OpenRouter API');
+      throw new Error('Unexpected response format from OpenRouter API');
     }
   } catch (error) {
     console.error('Error calling OpenRouter API:', error);
-    
-    // Try fallback to OpenAI directly if OpenRouter fails
-    return tryOpenAIFallback(systemPrompt, userPrompt);
+    return await tryOpenAIFallback(systemPrompt, userPrompt);
   }
 }
 
@@ -213,40 +241,35 @@ async function callOpenRouterAPI(systemPrompt: string, userPrompt: string): Prom
  * Fallback to direct OpenAI API if OpenRouter fails
  */
 async function tryOpenAIFallback(systemPrompt: string, userPrompt: string): Promise<string> {
+  if (!OPENAI_API_KEY) {
+    throw new Error('No API keys available for analysis');
+  }
+  
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is not set for fallback');
-    }
-    
+    // Call OpenAI API directly
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o', // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        model: 'gpt-4o', // Use GPT-4o 
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        response_format: { type: 'json_object' },
-        max_tokens: 3000,
+        max_tokens: 4000,
+        temperature: 0.3,
       },
       {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
         }
       }
     );
     
-    if (response.data && response.data.choices && response.data.choices.length > 0) {
-      return response.data.choices[0].message.content;
-    } else {
-      throw new Error('Invalid response from OpenAI API');
-    }
+    return response.data.choices[0].message.content;
   } catch (error) {
-    console.error('Error in OpenAI fallback:', error);
-    throw new Error('Both OpenRouter and OpenAI fallback failed');
+    console.error('Error calling OpenAI API:', error);
+    throw error;
   }
 }
 
@@ -255,20 +278,16 @@ async function tryOpenAIFallback(systemPrompt: string, userPrompt: string): Prom
  */
 function extractJsonResponse(responseText: string): any {
   try {
-    // First try direct parsing
-    return JSON.parse(responseText);
-  } catch (error) {
-    // If direct parsing fails, try to extract JSON from text
+    // Find JSON object in the response (in case the API returned extra text)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[0]);
-      } catch (e) {
-        console.error('Failed to parse extracted JSON:', e);
-      }
+      return JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error('No JSON found in response');
     }
-    
-    throw new Error('Could not extract valid JSON from API response');
+  } catch (error) {
+    console.error('Error parsing JSON response:', error);
+    throw error;
   }
 }
 
@@ -277,25 +296,68 @@ function extractJsonResponse(responseText: string): any {
  */
 function mapProductFields(products: any[], fieldMappings: FieldMapping[]): Product[] {
   return products.map(product => {
-    const standardizedProduct: Record<string, any> = { 
-      product_id: product.product_id || product.id || product.sku || generateProductId() 
+    // Create a new product object with standardized fields
+    const mappedProduct: Partial<Product> = {
+      product_id: generateProductId(),
+      status: "pending",
+      title: null,
+      description: null,
+      brand: null,
+      price: null,
+      category: null,
+      bullet_points: null,
+      images: null,
+      asin: null,
+      created_at: new Date(),
+      updated_at: new Date()
     };
     
     // Apply field mappings
-    fieldMappings.forEach(mapping => {
-      if (product[mapping.originalField] !== undefined) {
-        standardizedProduct[mapping.standardField] = product[mapping.originalField];
+    for (const mapping of fieldMappings) {
+      const { originalField, standardField } = mapping;
+      
+      // Check if the original field exists in the product
+      if (product[originalField] !== undefined) {
+        // Map to standard field based on its name
+        switch(standardField) {
+          case 'title':
+            mappedProduct.title = product[originalField];
+            break;
+          case 'description':
+            mappedProduct.description = product[originalField];
+            break;
+          case 'brand':
+            mappedProduct.brand = product[originalField];
+            break;
+          case 'price':
+            mappedProduct.price = product[originalField];
+            break;
+          case 'category':
+            mappedProduct.category = product[originalField];
+            break;
+          case 'bullet_points':
+            mappedProduct.bullet_points = product[originalField];
+            break;
+          case 'images':
+            mappedProduct.images = product[originalField];
+            break;
+          case 'asin':
+            mappedProduct.asin = product[originalField];
+            break;
+        }
       }
-    });
+    }
     
-    // Ensure key fields exist
-    getDefaultRequiredFields().forEach(field => {
-      if (standardizedProduct[field] === undefined) {
-        standardizedProduct[field] = '';
-      }
-    });
+    // Convert bullet points to array if it's a string
+    if (typeof mappedProduct.bullet_points === 'string') {
+      mappedProduct.bullet_points = [mappedProduct.bullet_points];
+    }
     
-    return standardizedProduct as Product;
+    // Ensure created_at and updated_at are set
+    mappedProduct.created_at = new Date();
+    mappedProduct.updated_at = new Date();
+    
+    return mappedProduct as Product;
   });
 }
 
@@ -303,7 +365,7 @@ function mapProductFields(products: any[], fieldMappings: FieldMapping[]): Produ
  * Generate a random product ID
  */
 function generateProductId(): string {
-  return `PROD-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+  return `PROD-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 }
 
 /**
@@ -311,14 +373,14 @@ function generateProductId(): string {
  */
 function getDefaultRequiredFields(): string[] {
   return [
-    'product_id',
     'title',
     'description',
-    'price',
     'brand',
+    'price',
     'category',
     'bullet_points',
-    'images'
+    'images',
+    'asin'
   ];
 }
 
@@ -326,61 +388,104 @@ function getDefaultRequiredFields(): string[] {
  * Basic field mapping detection as fallback
  */
 function detectFieldMappings(products: any[]): FieldMapping[] {
-  if (!products || products.length === 0) {
+  if (products.length === 0) {
     return [];
   }
   
-  // Get all field names from the first product
+  // Get all keys from the first product
   const sampleProduct = products[0];
-  const originalFields = Object.keys(sampleProduct);
-  
-  // Map common field variations
-  const fieldVariations: Record<string, string[]> = {
-    'product_id': ['id', 'sku', 'product_id', 'productid', 'item_id', 'itemid', 'product_code', 'productcode'],
-    'title': ['title', 'name', 'product_name', 'productname', 'item_name', 'itemname', 'product_title', 'producttitle'],
-    'description': ['description', 'desc', 'product_description', 'productdescription', 'full_description', 'fulldescription', 'detail'],
-    'price': ['price', 'cost', 'retail_price', 'retailprice', 'sale_price', 'saleprice', 'current_price', 'currentprice'],
-    'brand': ['brand', 'manufacturer', 'producer', 'brand_name', 'brandname', 'make'],
-    'category': ['category', 'cat', 'department', 'product_category', 'productcategory', 'product_type', 'producttype', 'type'],
-    'bullet_points': ['features', 'bullet_points', 'bulletpoints', 'key_features', 'keyfeatures', 'highlights', 'key_points', 'keypoints'],
-    'images': ['images', 'image', 'image_url', 'imageurl', 'picture', 'product_image', 'productimage']
-  };
+  const keys = Object.keys(sampleProduct);
   
   const mappings: FieldMapping[] = [];
   
-  // Check each original field against possible standard field
-  originalFields.forEach(originalField => {
-    const normalizedField = originalField.toLowerCase().replace(/[_\s-]/g, '');
+  // Field name normalization mapping
+  const commonMappings: Record<string, string> = {
+    // Title mappings
+    'title': 'title',
+    'name': 'title',
+    'product_name': 'title',
+    'product_title': 'title',
+    'item_name': 'title',
+    'item_title': 'title',
     
-    let matched = false;
-    Object.entries(fieldVariations).forEach(([standardField, variations]) => {
-      // Skip if we already matched this standard field
-      if (mappings.some(m => m.standardField === standardField)) {
-        return;
-      }
-      
-      // Check if this field matches any variation
-      if (variations.includes(normalizedField) || 
-          variations.some(v => normalizedField.includes(v)) ||
-          normalizedField === standardField.replace('_', '')) {
-        mappings.push({
-          originalField,
-          standardField,
-          confidence: variations.includes(normalizedField) ? 0.9 : 0.7
-        });
-        matched = true;
-      }
-    });
+    // Description mappings
+    'description': 'description',
+    'product_description': 'description',
+    'item_description': 'description',
+    'desc': 'description',
+    'long_description': 'description',
     
-    // If we didn't match, use the original field name
-    if (!matched) {
+    // Brand mappings
+    'brand': 'brand',
+    'brand_name': 'brand',
+    'manufacturer': 'brand',
+    'vendor': 'brand',
+    
+    // Price mappings
+    'price': 'price',
+    'item_price': 'price',
+    'product_price': 'price',
+    'retail_price': 'price',
+    'sale_price': 'price',
+    'cost': 'price',
+    
+    // Category mappings
+    'category': 'category',
+    'product_category': 'category',
+    'item_category': 'category',
+    'product_type': 'category',
+    'department': 'category',
+    
+    // Bullet point mappings
+    'bullet_points': 'bullet_points',
+    'bullets': 'bullet_points',
+    'features': 'bullet_points',
+    'product_features': 'bullet_points',
+    'key_features': 'bullet_points',
+    'highlights': 'bullet_points',
+    
+    // Image mappings
+    'images': 'images',
+    'image': 'images',
+    'image_url': 'images',
+    'product_image': 'images',
+    'item_image': 'images',
+    'picture': 'images',
+    
+    // ASIN mappings
+    'asin': 'asin',
+    'amazon_id': 'asin',
+    'amazon_identifier': 'asin',
+    'amazon_asin': 'asin',
+  };
+  
+  // Loop through all keys in the sample product
+  for (const key of keys) {
+    // Normalize the key (lowercase, remove spaces/underscores)
+    const normalizedKey = key.toLowerCase().replace(/[_\s]/g, '');
+    
+    // Check for exact matches in common mappings
+    if (commonMappings[key.toLowerCase()]) {
       mappings.push({
-        originalField,
-        standardField: originalField,
-        confidence: 0.5
+        originalField: key,
+        standardField: commonMappings[key.toLowerCase()],
+        confidence: 0.9
       });
+      continue;
     }
-  });
+    
+    // Check for partial matches by checking if any standard field is contained within the key
+    for (const [pattern, standardField] of Object.entries(commonMappings)) {
+      if (normalizedKey.includes(pattern.replace(/[_\s]/g, ''))) {
+        mappings.push({
+          originalField: key,
+          standardField,
+          confidence: 0.7
+        });
+        break;
+      }
+    }
+  }
   
   return mappings;
 }
@@ -390,52 +495,56 @@ function detectFieldMappings(products: any[]): FieldMapping[] {
  */
 export async function detectProductTypes(products: Product[]): Promise<Record<string, any>> {
   try {
-    if (!products || products.length === 0) {
-      return { productType: 'unknown', confidence: 0 };
-    }
+    const sampleSize = Math.min(3, products.length);
+    const productSamples = products.slice(0, sampleSize);
     
-    // Select a sample product for analysis
-    const sampleProduct = products[0];
-    
-    // Create a prompt to analyze the product type
+    // Create system prompt for product type detection
     const systemPrompt = `
-      You are an expert in product categorization for e-commerce. Your task is to analyze product data 
-      and identify the most specific product type or category. Consider all available data including 
-      title, description, and any other provided fields.
-      
-      Respond with a JSON object with the following properties:
-      - productType: The most specific product type (e.g., "Bluetooth Headphones" not just "Electronics")
-      - confidence: Your confidence in this classification (0-1)
-      - suggestedCategory: A hierarchical category path (e.g., "Electronics > Audio > Headphones > Wireless")
-      - keyAttributes: List of important attributes for this type of product
-      - missingAttributes: Important attributes that are missing from this data
-      - enhancementFocus: Areas where AI enhancement would be most valuable
-      
-      Keep your response concise and limited to these fields.
-    `;
-    
+You are an e-commerce product categorization expert.
+Your task is to analyze product data and determine the most specific product type.
+Based on the product information provided, classify products into specific categories.
+`;
+
+    // Create user prompt with product samples
     const userPrompt = `
-      Analyze this product data and determine the specific product type:
-      ${JSON.stringify(sampleProduct, null, 2)}
-      
-      If there are multiple products in the dataset, focus on identifying the common product category.
-    `;
+Analyze the following product data samples:
+
+${JSON.stringify(productSamples, null, 2)}
+
+Based on this data, determine:
+1. The most specific product type/category these items belong to (e.g., "Bluetooth Headphones" not just "Electronics")
+2. The target audience and use case for these products
+3. Key features that would be important for this type of product
+
+Respond with ONLY a JSON object with the following structure:
+{
+  "productType": "string (specific product type)",
+  "targetAudience": "string",
+  "keyFeatures": ["string"],
+  "marketplaceRecommendations": {
+    "amazon": "string",
+    "ebay": "string"
+  }
+}
+`;
+
+    // Call OpenRouter API for product type detection
+    const typeResponse = await callOpenRouterAPI(systemPrompt, userPrompt);
+    const typeData = extractJsonResponse(typeResponse);
     
-    // Call the OpenRouter API for analysis
-    const openRouterResponse = await callOpenRouterAPI(systemPrompt, userPrompt);
-    
-    // Extract and parse the JSON response
-    return extractJsonResponse(openRouterResponse);
-    
+    return typeData;
   } catch (error) {
     console.error('Error detecting product types:', error);
-    return { 
-      productType: 'unknown', 
-      confidence: 0.5,
-      suggestedCategory: 'General Merchandise',
-      keyAttributes: ['title', 'description', 'price'],
-      missingAttributes: ['brand', 'material', 'dimensions'],
-      enhancementFocus: ['title optimization', 'detailed description', 'feature highlights']
+    
+    // Return fallback product type information
+    return {
+      productType: "General Merchandise",
+      targetAudience: "General consumers",
+      keyFeatures: ["Quality", "Value", "Utility"],
+      marketplaceRecommendations: {
+        amazon: "Focus on product specifications and key features",
+        ebay: "Highlight condition, shipping, and return policies"
+      }
     };
   }
 }
@@ -444,130 +553,8 @@ export async function detectProductTypes(products: Product[]): Promise<Record<st
  * Generate detailed prompts for product enhancement based on the product type
  */
 export function generateEnhancementPrompt(productType: string, marketplace: string): string {
-  // Base prompt template for all product types
-  const basePrompt = `
-    You are an expert e-commerce content writer tasked with enhancing product listings for ${marketplace}. 
-    The products are in the category of "${productType}".
-    
-    Create compelling, conversion-optimized content following these guidelines:
-    - Write an SEO-optimized product title (max 200 characters for ${marketplace})
-    - Create a detailed product description (500-800 words) with paragraphs
-    - Generate 5 persuasive bullet points highlighting key features and benefits
-    - Ensure all content is factual and based only on the provided product information
-    - Use language and formatting appropriate for ${marketplace}
-    
-    Avoid:
-    - Exaggerated claims like "best" or "perfect" unless in original data
-    - Mentioning competitors or comparative statements
-    - Including pricing information in description or bullet points
-    - Using ALL CAPS except for industry acronyms
-    
-    Respond with a JSON object containing these fields:
-    - title: The optimized product title
-    - description: The complete product description
-    - bullet_points: Array of 5 bullet points
-    - suggested_keywords: Array of relevant search keywords
-  `;
+  // Import prompt templates from smart-prompts service
+  const { generateEnhancementSystemPrompt } = require('./smart-prompts');
   
-  // Add category-specific instructions
-  let categoryPrompt = '';
-  
-  if (productType.toLowerCase().includes('electronics') || 
-      productType.toLowerCase().includes('headphone') || 
-      productType.toLowerCase().includes('computer')) {
-    categoryPrompt = `
-      For electronics products:
-      - Highlight technical specifications prominently
-      - Mention compatibility with popular devices/systems
-      - Emphasize battery life, connectivity, and user experience
-      - Include information about warranty if available
-      - Use technical terminology appropriately for informed buyers
-    `;
-  } else if (productType.toLowerCase().includes('clothing') || 
-             productType.toLowerCase().includes('apparel') || 
-             productType.toLowerCase().includes('fashion')) {
-    categoryPrompt = `
-      For clothing/apparel products:
-      - Emphasize fabric, material, and comfort aspects
-      - Describe fit (regular, slim, loose) and sizing guidance
-      - Highlight style features, occasions for wear, and versatility
-      - Suggest styling options and outfit pairings
-      - Include care instructions briefly in the description
-    `;
-  } else if (productType.toLowerCase().includes('kitchen') || 
-             productType.toLowerCase().includes('home') || 
-             productType.toLowerCase().includes('furniture')) {
-    categoryPrompt = `
-      For home/kitchen products:
-      - Focus on functionality, convenience, and time-saving features
-      - Describe dimensions and space requirements clearly
-      - Highlight quality of materials and durability
-      - Emphasize ease of cleaning and maintenance
-      - Include information about warranty and customer support
-    `;
-  } else if (productType.toLowerCase().includes('beauty') || 
-             productType.toLowerCase().includes('health') || 
-             productType.toLowerCase().includes('personal care')) {
-    categoryPrompt = `
-      For beauty/health products:
-      - Focus on benefits rather than just features
-      - Highlight key ingredients and their purposes
-      - Address specific problems the product solves
-      - Include information about application/usage
-      - Mention if the product is free from harmful chemicals or allergens
-    `;
-  }
-  
-  // Add marketplace-specific optimization tips
-  let marketplacePrompt = '';
-  
-  if (marketplace.toLowerCase() === 'amazon') {
-    marketplacePrompt = `
-      Amazon-specific optimization:
-      - Title should follow pattern: [Brand] + [Feature] + [Product Type] + [Model] + [Size/Quantity]
-      - Begin bullet points with capital letters, focus on benefits followed by features
-      - Front-load important search keywords in the title and bullet points
-      - Prioritize detail and comprehensive information in the description
-      - Consider Amazon's search algorithm which prioritizes terms in the title
-    `;
-  } else if (marketplace.toLowerCase() === 'ebay') {
-    marketplacePrompt = `
-      eBay-specific optimization:
-      - Include specific, relevant keywords in the title (up to 80 characters)
-      - Use all available item specifics fields in your response
-      - Bullet points should highlight condition, authenticity, and unique selling points
-      - Be precise about any defects or imperfections if applicable
-      - Focus on detailed item descriptions that reduce potential buyer questions
-    `;
-  } else if (marketplace.toLowerCase() === 'walmart') {
-    marketplacePrompt = `
-      Walmart-specific optimization:
-      - Keep titles concise but complete (50-75 characters ideal)
-      - Ensure primary keywords appear in the first 45 characters of title
-      - Use simple, direct language appropriate for Walmart's broad customer base
-      - Highlight value proposition and practical benefits
-      - Be specific about any warranties or guarantees
-    `;
-  } else if (marketplace.toLowerCase() === 'shopify') {
-    marketplacePrompt = `
-      Shopify-specific optimization:
-      - Create a compelling, brand-focused title that stands out
-      - Craft a narrative-driven description that tells the product's story
-      - Highlight your brand's unique selling proposition
-      - Focus on creating visually scannable content with subheadings
-      - Include information about shipping, returns, and guarantees
-    `;
-  } else if (marketplace.toLowerCase() === 'etsy') {
-    marketplacePrompt = `
-      Etsy-specific optimization:
-      - Emphasize handmade, vintage, or unique aspects of the product
-      - Include production process or materials that make the item special
-      - Highlight customization options if available
-      - Tell the story behind the product or your brand
-      - Use descriptive, artistic language that appeals to Etsy shoppers
-    `;
-  }
-  
-  // Combine all prompt components
-  return `${basePrompt}\n\n${categoryPrompt}\n\n${marketplacePrompt}`;
+  return generateEnhancementSystemPrompt(productType, marketplace);
 }

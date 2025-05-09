@@ -50,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Then use intelligent analysis to improve the parsing
           const intelligentAnalysis = await analyzeProductData(initialProducts);
-          products = intelligentAnalysis.products;
+          products = intelligentAnalysis.mappedProducts;
           
           console.log("Intelligent CSV analysis completed successfully");
           console.log(`Detected product type: ${intelligentAnalysis.analysis.productType} (confidence: ${intelligentAnalysis.analysis.confidence.toFixed(2)})`);

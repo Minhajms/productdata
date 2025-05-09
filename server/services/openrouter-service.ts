@@ -1,234 +1,289 @@
 /**
- * OpenRouter API integration for product data enhancement
- * This service provides access to multiple AI models through a single API
+ * OpenRouter API Integration Service
+ * 
+ * This service provides product data enhancement capabilities using OpenRouter API
+ * with fallback to alternative AI providers when needed
  */
 
 import axios from 'axios';
 import { Product } from '@shared/schema';
 
-// Model mapping for OpenRouter
-const MODEL_MAP: Record<string, string> = {
-  'gpt4o': 'openai/gpt-4o',
-  'claude': 'anthropic/claude-3-7-sonnet',
-  'gemini': 'google/gemini-1.5-pro',
-  'mistral': 'mistralai/mistral-large',
-  'llama': 'meta-llama/llama-3-70b-chat',
-  // Economy versions with :floor suffix for cost-sensitive operations
-  'gpt4o-economy': 'openai/gpt-4o:floor',
-  'claude-economy': 'anthropic/claude-3-7-sonnet:floor',
-  // Performance versions with :nitro suffix for speed-sensitive operations
-  'gpt4o-performance': 'openai/gpt-4o:nitro',
-  'claude-performance': 'anthropic/claude-3-7-sonnet:nitro',
-  // Online versions with :online suffix for real-time data
-  'gpt4o-online': 'openai/gpt-4o:online',
-  'claude-online': 'anthropic/claude-3-7-sonnet:online'
-};
+// OpenRouter API configuration
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// Base URL for OpenRouter API
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
+// Optional referer for OpenRouter API call tracking (for analytics)
+const REFERER_URL = 'https://productdataenhancer.app';
 
 /**
- * Enhances product data using OpenRouter API to access multiple AI models
- * @param products List of products to enhance
- * @param marketplace Target marketplace (e.g., "Amazon", "eBay")
- * @param modelPreference Preferred AI model to use ('gpt4o', 'claude', 'gemini', etc.)
- * @returns Enhanced product data
+ * Enhance product data using OpenRouter API
+ * @param products Array of product objects to enhance
+ * @param marketplace Target marketplace
+ * @returns Array of enhanced product objects
  */
-/**
- * Tool definition for product research to be used with function calling
- */
-const productResearchTool = {
-  type: "function",
-  function: {
-    name: "product_research",
-    description: "Research and analyze product information to determine product type, features and category",
-    parameters: {
-      type: "object",
-      properties: {
-        productType: {
-          type: "string",
-          description: "The identified type of product based on available information"
-        },
-        keyFeatures: {
-          type: "array",
-          items: { type: "string" },
-          description: "Key features and benefits of the product"
-        },
-        primaryUse: {
-          type: "string",
-          description: "The primary use case for this product"
-        },
-        suggestedCategory: {
-          type: "string",
-          description: "The e-commerce category this product would best fit in"
-        },
-        targetAudience: {
-          type: "string",
-          description: "The target audience or customer demographic for this product"
-        },
-        additionalInfo: {
-          type: "string",
-          description: "Any other relevant information about the product"
-        }
-      },
-      required: ["productType", "keyFeatures", "primaryUse", "suggestedCategory", "targetAudience"]
-    }
-  }
-};
-
-export async function enhanceProductDataWithOpenRouter(
-  products: any[], 
-  marketplace: string,
-  modelPreference: string = 'gpt4o'
-): Promise<Product[]> {
-  console.log(`Enhancing ${products.length} products for ${marketplace} using OpenRouter with model preference: ${modelPreference}`);
+export async function enhanceProductDataWithOpenRouter(products: Product[], marketplace: string): Promise<Product[]> {
+  console.log(`Enhancing ${products.length} products for ${marketplace} marketplace using OpenRouter`);
   
-  // Use the model map to get the full model identifier, fallback to GPT-4o if not found
-  const modelIdentifier = MODEL_MAP[modelPreference] || MODEL_MAP['gpt4o'];
-  console.log(`Using model: ${modelIdentifier}`);
-
-  const enhancedProducts = [];
-
-  // Process each product
+  const enhancedProducts: Product[] = [];
+  
   for (const product of products) {
-    console.log(`Processing product ID: ${product.product_id}`);
-    
     try {
-      // Research the product first to better understand it
-      const researchedProduct = await researchProductWithOpenRouter(product, modelIdentifier);
+      // First, get product understanding through research
+      const researchedProduct = await researchProductWithOpenRouter(product);
       
-      // Generate optimized content for the product
-      const title = await generateTitleWithOpenRouter(researchedProduct, marketplace, 200, modelIdentifier);
-      const description = await generateDescriptionWithOpenRouter(researchedProduct, marketplace, 2000, modelIdentifier);
-      const bulletPoints = await generateBulletPointsWithOpenRouter(researchedProduct, marketplace, 5, modelIdentifier);
-      const brand = product.brand || await suggestBrandWithOpenRouter(researchedProduct, modelIdentifier);
-      const category = await suggestCategoryWithOpenRouter(researchedProduct, marketplace, modelIdentifier);
+      // Then generate enhanced content for the product
+      const enhancedTitle = await generateTitleWithOpenRouter(
+        { ...product, ...researchedProduct }, 
+        marketplace, 
+        200
+      );
       
-      // Generate a random ASIN if needed for Amazon
-      const asin = marketplace.toLowerCase() === 'amazon' ? 
-        (product.asin || generateRandomASIN()) : undefined;
+      const enhancedDescription = await generateDescriptionWithOpenRouter(
+        { ...product, ...researchedProduct }, 
+        marketplace, 
+        2000
+      );
       
-      // Combine original and enhanced data
+      const enhancedBulletPoints = await generateBulletPointsWithOpenRouter(
+        { ...product, ...researchedProduct }, 
+        marketplace, 
+        5
+      );
+      
+      // Create enhanced product object
       const enhancedProduct = {
         ...product,
-        title,
-        description,
-        bullet_points: bulletPoints,
-        brand,
-        category,
-        asin,
-        status: 'enhanced',
-        enhancement_date: new Date().toISOString()
+        title: enhancedTitle,
+        description: enhancedDescription,
+        bullet_points: enhancedBulletPoints,
+        status: "enhanced",
       };
       
       enhancedProducts.push(enhancedProduct);
+      
     } catch (error) {
       console.error(`Error enhancing product ${product.product_id}:`, error);
-      // If enhancement fails, include the original product with an error status and fallback content
-      // This ensures we return something usable even if some products fail
-      let errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      // Generate minimal fallback content if available data is very limited
-      const fallbackTitle = product.title || product.name || 
-                          `${product.brand || 'Quality'} ${product.category || 'Product'}`;
-      const fallbackDescription = product.description || 
-                              `High-quality ${product.category || 'product'} ${product.brand ? `from ${product.brand}` : ''}.`;
-      
+      // Add original product to results in case of error
       enhancedProducts.push({
         ...product,
-        title: product.title || fallbackTitle,
-        description: product.description || fallbackDescription,
-        status: 'partial',
-        enhancement_error: errorMessage,
-        enhancement_note: 'This product was partially processed due to API limitations. Some fields may require manual editing.'
+        status: "error"
       });
     }
   }
-
+  
   return enhancedProducts;
 }
 
 /**
- * Calls the OpenRouter API to generate content
- * @param messages The message array to send to OpenRouter
- * @param modelIdentifier The model identifier to use
- * @returns Generated content
+ * Call OpenRouter API with error handling and fallback mechanisms
+ * @param systemPrompt The system prompt to guide the AI model
+ * @param userPrompt The user prompt/question
+ * @param model Optional specific model to use
+ * @returns The generated text response
  */
 async function callOpenRouterAPI(
-  messages: any[],
-  modelIdentifier: string
+  systemPrompt: string, 
+  userPrompt: string, 
+  model: string = 'anthropic/claude-3-7-sonnet-20250219'
 ): Promise<string> {
   try {
-    const openrouterKey = process.env.OPENROUTER_API_KEY;
-    
-    if (!openrouterKey) {
-      throw new Error('OPENROUTER_API_KEY environment variable is not set');
-    }
-
-    // Implement model fallback with the 'models' parameter for reliability
-    const primaryModel = modelIdentifier;
-    
-    // Define fallback models based on the primary model type
-    let fallbackModels = [];
-    if (primaryModel.includes('openai')) {
-      fallbackModels = ['anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
-    } else if (primaryModel.includes('anthropic')) {
-      fallbackModels = ['openai/gpt-4o', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
-    } else if (primaryModel.includes('google')) {
-      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'mistralai/mistral-large'];
-    } else {
-      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro'];
+    // Check if OpenRouter API key is available
+    if (!OPENROUTER_API_KEY) {
+      console.warn('OpenRouter API key not found, falling back to direct API calls');
+      return await fallbackToDirectAPI(systemPrompt, userPrompt, model);
     }
     
-    // Add route parameter for provider optimization
-    const route = "fallback"; // Options: "lowest-latency", "lowest-cost", "highest-quality", "fallback"
-    
+    // Configure request to OpenRouter API
     const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
+      `${OPENROUTER_BASE_URL}/chat/completions`,
       {
-        model: primaryModel,
-        models: fallbackModels, // Add fallback models for reliability
-        route: route, // Add provider routing for optimal model selection
-        messages: messages,
-        max_tokens: 1024,
+        model: model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 4000,
         temperature: 0.7,
-        response_format: { type: "json_object" }, // Add structured outputs for reliable JSON
-        transforms: ["middle-out"], // Add middle-out compression for handling large contexts
-        web_search: { // Add web search capabilities for real-time data enrichment
-          enable: true,
-          search_results: 3
-        }
+        top_p: 0.9
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openrouterKey}`,
-          'HTTP-Referer': 'https://product-enhancer.replit.app', 
-          'X-Title': 'Product Data Enhancer',
-          'Cache-Control': 'max-age=300' // Enable caching with 5-minute TTL
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': REFERER_URL,
+          'X-Title': 'Product Data Enhancer'
         }
       }
     );
-
-    const generatedText = response.data.choices[0].message.content;
-    return generatedText;
-  } catch (error) {
-    console.error('OpenRouter API call failed:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('OpenRouter API error details:', error.response.data);
-      
-      // Handle credit insufficiency specifically
-      if (error.response.status === 402 || 
-          (error.response.data?.error?.code === 402) || 
-          (error.response.data?.error?.message?.includes('credits'))) {
-        throw new Error('Insufficient OpenRouter credits. Please add more credits or use a different AI provider.');
-      }
-      
-      // Better error handling for other cases
-      const errorMessage = error.response.data?.error?.message || 
-                           (typeof error.response.data?.error === 'string' ? error.response.data.error : 
-                           JSON.stringify(error.response.data?.error)) || 
-                           error.message;
-                           
-      throw new Error(`OpenRouter API error: ${errorMessage}`);
+    
+    // Extract and return the response content
+    if (response.data && 
+        response.data.choices && 
+        response.data.choices.length > 0 && 
+        response.data.choices[0].message &&
+        response.data.choices[0].message.content) {
+      return response.data.choices[0].message.content;
+    } else {
+      throw new Error('Unexpected response format from OpenRouter API');
     }
+  } catch (error) {
+    console.error('Error calling OpenRouter API:', error);
+    
+    // Attempt to fall back to direct API calls
+    console.log('Attempting fallback to direct API calls...');
+    return await fallbackToDirectAPI(systemPrompt, userPrompt, model);
+  }
+}
+
+/**
+ * Fallback to direct API calls when OpenRouter is unavailable
+ * @param systemPrompt The system prompt
+ * @param userPrompt The user prompt
+ * @param model The requested model
+ * @returns Generated text response
+ */
+async function fallbackToDirectAPI(
+  systemPrompt: string, 
+  userPrompt: string, 
+  model: string
+): Promise<string> {
+  // Determine which API to call based on the requested model
+  if (model.includes('anthropic') && ANTHROPIC_API_KEY) {
+    return await callAnthropicAPI(systemPrompt, userPrompt);
+  } else if (model.includes('openai') && OPENAI_API_KEY) {
+    return await callOpenAIAPI(systemPrompt, userPrompt);
+  } else if (model.includes('gemini') && GEMINI_API_KEY) {
+    return await callGeminiAPI(systemPrompt, userPrompt);
+  } else if (OPENAI_API_KEY) {
+    // Default fallback to OpenAI if available
+    return await callOpenAIAPI(systemPrompt, userPrompt);
+  } else if (ANTHROPIC_API_KEY) {
+    // Otherwise try Anthropic
+    return await callAnthropicAPI(systemPrompt, userPrompt);
+  } else if (GEMINI_API_KEY) {
+    // Finally try Gemini
+    return await callGeminiAPI(systemPrompt, userPrompt);
+  } else {
+    throw new Error('No API keys available for fallback');
+  }
+}
+
+/**
+ * Call OpenAI API directly
+ * @param systemPrompt The system prompt
+ * @param userPrompt The user prompt
+ * @returns Generated text response
+ */
+async function callOpenAIAPI(systemPrompt: string, userPrompt: string): Promise<string> {
+  try {
+    // Call OpenAI API
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4o', // Use the latest model, which is GPT-4o
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 4000,
+        temperature: 0.7
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        }
+      }
+    );
+    
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error('Error calling OpenAI API:', error);
+    throw error;
+  }
+}
+
+/**
+ * Call Anthropic API directly
+ * @param systemPrompt The system prompt
+ * @param userPrompt The user prompt
+ * @returns Generated text response
+ */
+async function callAnthropicAPI(systemPrompt: string, userPrompt: string): Promise<string> {
+  try {
+    // Call Anthropic API
+    const response = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-3-7-sonnet-20250219', // Use the newest Anthropic model (claude-3-7-sonnet-20250219)
+        system: systemPrompt,
+        messages: [
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 4000
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        }
+      }
+    );
+    
+    return response.data.content[0].text;
+  } catch (error) {
+    console.error('Error calling Anthropic API:', error);
+    throw error;
+  }
+}
+
+/**
+ * Call Google Gemini API directly
+ * @param systemPrompt The system prompt
+ * @param userPrompt The user prompt
+ * @returns Generated text response
+ */
+async function callGeminiAPI(systemPrompt: string, userPrompt: string): Promise<string> {
+  try {
+    // Combine system prompt and user prompt for Gemini
+    const combinedPrompt = `${systemPrompt}\n\n${userPrompt}`;
+    
+    // Call Google Gemini API
+    const response = await axios.post(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent',
+      {
+        contents: [
+          {
+            parts: [
+              { text: combinedPrompt }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 4000,
+          topP: 0.9,
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        params: {
+          key: GEMINI_API_KEY
+        }
+      }
+    );
+    
+    return response.data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error('Error calling Gemini API:', error);
     throw error;
   }
 }
@@ -236,185 +291,59 @@ async function callOpenRouterAPI(
 /**
  * Researches a product to understand what it is based on limited information
  * @param product Product data with limited information
- * @param modelIdentifier The model identifier to use
  * @returns Enhanced understanding of the product
  */
-async function researchProductWithOpenRouter(product: any, modelIdentifier: string): Promise<any> {
-  console.log(`Researching product: ${product.product_id}`);
+async function researchProductWithOpenRouter(product: any): Promise<any> {
+  // Create system prompt for product research
+  const systemPrompt = `
+You are a product data expert with deep knowledge of e-commerce and product categorization.
+Your task is to analyze the given product information and enhance understanding of what this product is.
+Based on the provided data, determine the product type, category, and any other relevant information.
+  `;
   
-  // Prepare product data for the prompt
-  const productData = {
-    id: product.product_id,
-    name: product.name || product.title || 'Unknown',
-    shortDescription: product.short_description || product.description || '',
-    category: product.category || '',
-    features: product.features || product.bullet_points || [],
-    brand: product.brand || '',
-    price: product.price || '',
-    sku: product.sku || '',
-    mpn: product.mpn || ''
-  };
-  
-  // Set up messages with function calling
-  const messages = [
-    {
-      role: "system",
-      content: [
-        {
-          type: "text",
-          text: "You are a product research specialist with expertise in e-commerce optimization and marketplace listings. Your task is to analyze product data and identify what the product is, even with limited information. Use real-time information from the web if needed."
-        }
-      ]
-    },
-    { 
-      role: "user", 
-      content: [
-        {
-          type: "text",
-          text: "I need to understand this product better to create marketplace listings:"
-        },
-        {
-          type: "text",
-          text: JSON.stringify(productData, null, 2)
-        },
-        {
-          type: "text",
-          text: `Based on the available information, please research this product and determine:
-1. What type of product is this?
-2. What are its key features and benefits?
-3. What is its primary use case?
-4. What category would it belong to?
-5. Who would be the target audience?
+  // Create user prompt with product details
+  const userPrompt = `
+Please analyze this product and provide an enhanced understanding of what it is:
 
-Use the product_research function to provide your findings.`
-        }
-      ] 
-    }
-  ];
-  
-  // Update API params to include tool calling
-  const requestBody = {
-    model: modelIdentifier,
-    messages: messages,
-    tools: [productResearchTool],
-    tool_choice: { type: "function", function: { name: "product_research" } },
-    max_tokens: 1024,
-    temperature: 0.7
-  };
+Product Title: ${product.title || 'Not provided'}
+Description: ${product.description || 'Not provided'}
+Brand: ${product.brand || 'Not provided'}
+Category: ${product.category || 'Not provided'}
+Price: ${product.price || 'Not provided'}
+Additional details: ${JSON.stringify(product.attributes || {})}
+
+Based on this information, please provide:
+1. The likely product type and category
+2. The target audience/use case
+3. Key features that would be important for this product type
+4. Any other relevant information that would help understand this product better
+
+Respond in JSON format with the following structure:
+{
+  "productType": "string",
+  "category": "string",
+  "targetAudience": "string",
+  "keyFeatures": ["string", "string", ...],
+  "additionalNotes": "string"
+}
+  `;
   
   try {
-    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    // Call OpenRouter API to get product research
+    const response = await callOpenRouterAPI(systemPrompt, userPrompt);
     
-    if (!openrouterKey) {
-      throw new Error('OPENROUTER_API_KEY environment variable is not set');
-    }
-    
-    // Define fallback models based on the primary model type
-    let fallbackModels = [];
-    if (modelIdentifier.includes('openai')) {
-      fallbackModels = ['anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
-    } else if (modelIdentifier.includes('anthropic')) {
-      fallbackModels = ['openai/gpt-4o', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
-    } else if (modelIdentifier.includes('google')) {
-      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'mistralai/mistral-large'];
+    // Parse the JSON response
+    // Find JSON object in the response text (in case the API returned extra text)
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
     } else {
-      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro'];
+      console.warn('No JSON found in product research response, using empty object');
+      return {};
     }
-    
-    // Add model routing and provider routing
-    const route = "fallback"; // Options: "lowest-latency", "lowest-cost", "highest-quality", "fallback"
-    
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        ...requestBody,
-        models: fallbackModels,
-        route: route,
-        transforms: ["middle-out"],
-        web_search: {
-          enable: true,
-          search_results: 3
-        }
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openrouterKey}`,
-          'HTTP-Referer': 'https://product-enhancer.replit.app', 
-          'X-Title': 'Product Data Enhancer',
-          'Cache-Control': 'max-age=300'
-        }
-      }
-    );
-    
-    // Extract function call results
-    if (response.data.choices[0].message.tool_calls && 
-        response.data.choices[0].message.tool_calls.length > 0) {
-      // Extract function arguments (which contain our research data)
-      const researchData = JSON.parse(response.data.choices[0].message.tool_calls[0].function.arguments);
-      
-      return {
-        ...product,
-        researched: true,
-        productType: researchData.productType,
-        keyFeatures: researchData.keyFeatures,
-        primaryUse: researchData.primaryUse,
-        suggestedCategory: researchData.suggestedCategory,
-        targetAudience: researchData.targetAudience,
-        additionalInfo: researchData.additionalInfo
-      };
-    } else if (response.data.choices[0].message.content) {
-      // Fallback to regular content if function calling not supported
-      try {
-        // Try to parse the response as JSON
-        let researchData = JSON.parse(response.data.choices[0].message.content);
-        return {
-          ...product,
-          researched: true,
-          productType: researchData.productType,
-          keyFeatures: researchData.keyFeatures,
-          primaryUse: researchData.primaryUse,
-          suggestedCategory: researchData.suggestedCategory,
-          targetAudience: researchData.targetAudience,
-          additionalInfo: researchData.additionalInfo
-        };
-      } catch (error) {
-        // If JSON parsing fails, use the text response directly
-        return {
-          ...product,
-          researched: true,
-          researchNotes: response.data.choices[0].message.content
-        };
-      }
-    }
-    
-    // If all else fails, return the product with minimal enhancement
-    return {
-      ...product,
-      researched: true,
-      researchNotes: "Unable to extract structured research data"
-    };
-    
   } catch (error) {
-    console.error('Product research API call failed:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('API error details:', error.response.data);
-      
-      // Handle credit insufficiency specifically
-      if (error.response.status === 402 || 
-          (error.response.data?.error?.code === 402) || 
-          (error.response.data?.error?.message?.includes('credits'))) {
-        throw new Error('Insufficient OpenRouter credits. Please add more credits or use a different AI provider.');
-      }
-      
-      const errorMessage = error.response.data?.error?.message || 
-                         (typeof error.response.data?.error === 'string' ? error.response.data.error : 
-                         JSON.stringify(error.response.data?.error)) || 
-                         error.message;
-                         
-      throw new Error(`API error: ${errorMessage}`);
-    }
-    throw error;
+    console.error('Error researching product:', error);
+    return {};
   }
 }
 
@@ -423,61 +352,52 @@ Use the product_research function to provide your findings.`
  * @param product Product data
  * @param marketplace Target marketplace
  * @param maxLength Maximum title length
- * @param modelIdentifier The model identifier to use
  * @returns Generated title
  */
-async function generateTitleWithOpenRouter(
-  product: any, 
-  marketplace: string, 
-  maxLength: number,
-  modelIdentifier: string
-): Promise<string> {
-  console.log(`Generating title for product: ${product.product_id}`);
+async function generateTitleWithOpenRouter(product: any, marketplace: string, maxLength: number): Promise<string> {
+  // Create system prompt for title generation
+  const systemPrompt = `
+You are a product listing optimization expert for ${marketplace}. 
+Your task is to create an SEO-optimized product title that will maximize visibility and conversion rate.
+The title should be compelling, include relevant keywords, and follow ${marketplace}'s best practices.
+  `;
   
-  const systemPrompt = `You are an e-commerce listing optimization expert. Create a compelling product title that follows ${marketplace} marketplace best practices:
-- Include key product features that shoppers search for
-- Use natural language that's easy to read
-- Prioritize important keywords at the beginning
-- Include brand name, key specs, model numbers when relevant
-- Keep it under ${maxLength} characters
-- Focus on clarity and searchability`;
+  // Create user prompt with product details and marketplace requirements
+  const userPrompt = `
+Please generate an optimized product title for this ${product.productType || 'item'} on ${marketplace}.
 
-  const messages = [
-    { 
-      role: "system", 
-      content: [
-        {
-          type: "text",
-          text: systemPrompt
-        }
-      ]
-    },
-    { 
-      role: "user", 
-      content: [
-        {
-          type: "text",
-          text: "Create an optimized product title for this product:"
-        },
-        {
-          type: "text",
-          text: JSON.stringify(product, null, 2),
-          cache_control: {
-            type: "ephemeral"
-          }
-        },
-        {
-          type: "text",
-          text: "Respond ONLY with the title text. Do NOT include any explanations."
-        }
-      ] 
-    }
-  ];
+Product information:
+- Current title: ${product.title || 'Not provided'}
+- Description: ${product.description || 'Not provided'}
+- Brand: ${product.brand || 'Not provided'}
+- Category: ${product.category || 'Not provided'}
+- Product type: ${product.productType || 'Not provided'}
+- Key features: ${JSON.stringify(product.keyFeatures || [])}
+
+Requirements for ${marketplace} titles:
+- Maximum length: ${maxLength} characters
+- Include the brand name
+- Include key product features and benefits
+- Use relevant keywords for searchability
+- Avoid ALL CAPS except for brand names that are normally capitalized
+- Avoid excessive punctuation or special characters
+
+Respond with ONLY the optimized title text, without any explanation or additional text.
+  `;
   
-  const title = await callOpenRouterAPI(messages, modelIdentifier);
-  
-  // Remove extra quotes and trim whitespace
-  return title.replace(/^["']|["']$/g, '').trim().substring(0, maxLength);
+  try {
+    // Call OpenRouter API to get generated title
+    const title = await callOpenRouterAPI(systemPrompt, userPrompt);
+    
+    // Clean up title (remove quotes, trim whitespace, etc.)
+    const cleanedTitle = title.replace(/^["']|["']$/g, '').trim();
+    
+    // Ensure title doesn't exceed max length
+    return cleanedTitle.length > maxLength ? cleanedTitle.substring(0, maxLength) : cleanedTitle;
+  } catch (error) {
+    console.error('Error generating title:', error);
+    return product.title || '';
+  }
 }
 
 /**
@@ -485,63 +405,55 @@ async function generateTitleWithOpenRouter(
  * @param product Product data
  * @param marketplace Target marketplace
  * @param maxLength Maximum description length
- * @param modelIdentifier The model identifier to use
  * @returns Generated description
  */
-async function generateDescriptionWithOpenRouter(
-  product: any, 
-  marketplace: string, 
-  maxLength: number,
-  modelIdentifier: string
-): Promise<string> {
-  console.log(`Generating description for product: ${product.product_id}`);
+async function generateDescriptionWithOpenRouter(product: any, marketplace: string, maxLength: number): Promise<string> {
+  // Create system prompt for description generation
+  const systemPrompt = `
+You are a product content writer specializing in ${marketplace} listings.
+Your task is to create a compelling, detailed product description that highlights benefits, features, and use cases.
+The description should be engaging, persuasive, and follow ${marketplace}'s content guidelines.
+Use formatting appropriate for ${marketplace} (paragraphs, line breaks) to improve readability.
+  `;
   
-  const systemPrompt = `You are an e-commerce copywriter specializing in ${marketplace} listings. Create a compelling product description that:
-- Has a strong opening that hooks potential buyers
-- Highlights key features and benefits
-- Addresses customer pain points and explains how the product solves them
-- Includes relevant specifications (dimensions, materials, compatibility, etc.)
-- Uses paragraph breaks for readability
-- Is optimized for ${marketplace}'s search algorithm with relevant keywords
-- Maintains a professional, engaging tone
-- Stays under ${maxLength} characters`;
+  // Create user prompt with product details and marketplace requirements
+  const userPrompt = `
+Please write a detailed product description for this ${product.productType || 'item'} on ${marketplace}.
 
-  const messages = [
-    { 
-      role: "system", 
-      content: [
-        {
-          type: "text",
-          text: systemPrompt
-        }
-      ]
-    },
-    { 
-      role: "user", 
-      content: [
-        {
-          type: "text",
-          text: "Create an optimized product description for this product:"
-        },
-        {
-          type: "text",
-          text: JSON.stringify(product, null, 2),
-          cache_control: {
-            type: "ephemeral"
-          }
-        },
-        {
-          type: "text",
-          text: "Respond ONLY with the description text. Do NOT include any explanations."
-        }
-      ]
-    }
-  ];
+Product information:
+- Title: ${product.title || 'Not provided'}
+- Current description: ${product.description || 'Not provided'}
+- Brand: ${product.brand || 'Not provided'}
+- Category: ${product.category || 'Not provided'}
+- Product type: ${product.productType || 'Not provided'}
+- Target audience: ${product.targetAudience || 'Not provided'}
+- Key features: ${JSON.stringify(product.keyFeatures || [])}
+
+Requirements for ${marketplace} descriptions:
+- Maximum length: ${maxLength} characters
+- Include 3-4 paragraphs with line breaks between them
+- Focus on benefits to the customer, not just features
+- Highlight what makes this product unique/special
+- Use engaging, persuasive language
+- Be accurate and avoid exaggerated claims
+- Include relevant keywords naturally
+
+Respond with ONLY the description text, without any explanation or additional content.
+  `;
   
-  const description = await callOpenRouterAPI(messages, modelIdentifier);
-  
-  // Clean up the response and ensure it's within length limits
-  return description.trim().substring(0, maxLength);
+  try {
+    // Call OpenRouter API to get generated description
+    const description = await callOpenRouterAPI(systemPrompt, userPrompt);
+    
+    // Clean up description (remove quotes, trim whitespace, etc.)
+    const cleanedDescription = description.replace(/^["']|["']$/g, '').trim();
+    
+    // Ensure description doesn't exceed max length
+    return cleanedDescription.length > maxLength ? cleanedDescription.substring(0, maxLength) : cleanedDescription;
+  } catch (error) {
+    console.error('Error generating description:', error);
+    return product.description || '';
+  }
 }
 
 /**
@@ -549,211 +461,66 @@ async function generateDescriptionWithOpenRouter(
  * @param product Product data
  * @param marketplace Target marketplace
  * @param count Number of bullet points to generate
- * @param modelIdentifier The model identifier to use
  * @returns Array of bullet points
  */
-async function generateBulletPointsWithOpenRouter(
-  product: any, 
-  marketplace: string, 
-  count: number,
-  modelIdentifier: string
-): Promise<string[]> {
-  console.log(`Generating bullet points for product: ${product.product_id}`);
+async function generateBulletPointsWithOpenRouter(product: any, marketplace: string, count: number): Promise<string[]> {
+  // Create system prompt for bullet points generation
+  const systemPrompt = `
+You are a product listing optimization expert for ${marketplace}.
+Your task is to create compelling bullet points that highlight the key features and benefits of this product.
+Each bullet point should be concise, benefit-focused, and help convince customers to purchase.
+Follow ${marketplace}'s best practices for bullet points to maximize conversion.
+  `;
   
-  const systemPrompt = `You are an e-commerce optimization expert. Create ${count} compelling bullet points that:
-- Highlight the most important features and benefits
-- Begin with the benefit to the customer, then explain the feature
-- Use sentence case (capitalize first word only)
-- Are concise yet descriptive
-- Are optimized for ${marketplace}'s search algorithm
-- Are ordered by importance (most important first)
-- Do not use bullet point markers (•, *, etc.) as they will be added by the system`;
+  // Create user prompt with product details and marketplace requirements
+  const userPrompt = `
+Please generate ${count} bullet points for this ${product.productType || 'item'} on ${marketplace}.
 
-  const messages = [
-    { 
-      role: "system", 
-      content: [
-        {
-          type: "text",
-          text: systemPrompt
-        }
-      ]
-    },
-    { 
-      role: "user", 
-      content: [
-        {
-          type: "text",
-          text: `Create ${count} optimized bullet points for this product:`
-        },
-        {
-          type: "text",
-          text: JSON.stringify(product, null, 2),
-          cache_control: {
-            type: "ephemeral"
-          }
-        },
-        {
-          type: "text",
-          text: `Respond with EXACTLY ${count} bullet points in a JSON array format like this:
-["Bullet point 1", "Bullet point 2", "Bullet point 3", ...]
+Product information:
+- Title: ${product.title || 'Not provided'}
+- Description: ${product.description || 'Not provided'}
+- Brand: ${product.brand || 'Not provided'}
+- Category: ${product.category || 'Not provided'}
+- Product type: ${product.productType || 'Not provided'}
+- Target audience: ${product.targetAudience || 'Not provided'}
+- Key features: ${JSON.stringify(product.keyFeatures || [])}
 
-Do NOT include any explanations, just the JSON array.`
-        }
-      ] 
-    }
-  ];
-  
-  const response = await callOpenRouterAPI(messages, modelIdentifier);
+Requirements for ${marketplace} bullet points:
+- Exactly ${count} bullet points
+- Each bullet point should be 1-2 sentences (not too long)
+- Start with a benefit or feature in capital letters, then explain its value
+- Focus on the most important/unique selling points
+- Be specific with facts, measurements, or capabilities when possible
+- Use parallel structure (consistent grammar format across bullets)
+
+Respond with ONLY the bullet points, one per line, without numbers, asterisks, or other bullet point markers.
+  `;
   
   try {
-    // Try to parse the response as JSON
-    const bulletPoints = JSON.parse(response);
+    // Call OpenRouter API to get generated bullet points
+    const response = await callOpenRouterAPI(systemPrompt, userPrompt);
     
-    // Ensure we have exactly the right number of bullet points
-    const normalizedBulletPoints = bulletPoints.slice(0, count);
-    while (normalizedBulletPoints.length < count) {
-      normalizedBulletPoints.push(`Feature ${normalizedBulletPoints.length + 1}: Enhances your experience`);
-    }
-    
-    return normalizedBulletPoints;
-  } catch (error) {
-    console.warn("Could not parse bullet points as JSON. Generating fallback bullets.");
-    
-    // If JSON parsing fails, split by newlines and clean up
-    const fallbackBullets = response
-      .split(/\r?\n/)
-      .map(line => line.replace(/^[•\-*]\s*/, '').trim())
+    // Split response into lines and clean them up
+    let bulletPoints = response
+      .split('\n')
+      .map(line => line.trim())
       .filter(line => line.length > 0)
-      .slice(0, count);
+      .map(line => line.replace(/^[•\-*]\s*/, '')) // Remove any bullet point markers
+      .map(line => line.replace(/^["']|["']$/g, '')); // Remove quotes
     
-    // Ensure we have exactly the right number of bullet points
-    while (fallbackBullets.length < count) {
-      fallbackBullets.push(`Feature ${fallbackBullets.length + 1}: Enhances your experience`);
+    // Ensure we have exactly the requested number of bullet points
+    if (bulletPoints.length > count) {
+      bulletPoints = bulletPoints.slice(0, count);
+    } else if (bulletPoints.length < count) {
+      // Fill with empty strings if we have fewer than requested
+      while (bulletPoints.length < count) {
+        bulletPoints.push('');
+      }
     }
     
-    return fallbackBullets;
+    return bulletPoints;
+  } catch (error) {
+    console.error('Error generating bullet points:', error);
+    return product.bullet_points || [];
   }
-}
-
-/**
- * Suggests a brand name based on product information
- * @param product Product data
- * @param modelIdentifier The model identifier to use
- * @returns Suggested brand name
- */
-async function suggestBrandWithOpenRouter(product: any, modelIdentifier: string): Promise<string> {
-  console.log(`Suggesting brand for product: ${product.product_id}`);
-  
-  const systemPrompt = "You are a brand specialist. Your task is to identify or suggest an appropriate brand name for a product based on the provided information. If a brand name is already present in the data, extract and return it. If not, suggest a suitable brand name that fits the product category and characteristics.";
-
-  const messages = [
-    { 
-      role: "system", 
-      content: [
-        {
-          type: "text",
-          text: systemPrompt
-        }
-      ]
-    },
-    { 
-      role: "user", 
-      content: [
-        {
-          type: "text",
-          text: "Based on this product information, what would be an appropriate brand name?"
-        },
-        {
-          type: "text",
-          text: JSON.stringify(product, null, 2),
-          cache_control: {
-            type: "ephemeral"
-          }
-        },
-        {
-          type: "text",
-          text: "Respond ONLY with the brand name. Keep it short and appropriate for the product category. Do NOT include any explanations."
-        }
-      ] 
-    }
-  ];
-  
-  const brand = await callOpenRouterAPI(messages, modelIdentifier);
-  
-  // Clean up the response
-  return brand.replace(/^["']|["']$/g, '').trim();
-}
-
-/**
- * Suggests a product category based on product information
- * @param product Product data
- * @param marketplace Target marketplace
- * @param modelIdentifier The model identifier to use
- * @returns Suggested product category
- */
-async function suggestCategoryWithOpenRouter(
-  product: any, 
-  marketplace: string,
-  modelIdentifier: string
-): Promise<string> {
-  console.log(`Suggesting category for product: ${product.product_id}`);
-  
-  const systemPrompt = `You are a ${marketplace} category specialist. Your task is to suggest the most appropriate product category for the given product. Consider:
-- The product's primary function and features
-- Standard ${marketplace} category naming conventions
-- The most specific appropriate category (not too broad)`;
-
-  const messages = [
-    { 
-      role: "system", 
-      content: [
-        {
-          type: "text",
-          text: systemPrompt
-        }
-      ]
-    },
-    { 
-      role: "user", 
-      content: [
-        {
-          type: "text",
-          text: `Based on this product information, what would be the most appropriate ${marketplace} category?`
-        },
-        {
-          type: "text",
-          text: JSON.stringify(product, null, 2),
-          cache_control: {
-            type: "ephemeral"
-          }
-        },
-        {
-          type: "text",
-          text: "Respond ONLY with the category name. Do NOT include any explanations."
-        }
-      ] 
-    }
-  ];
-  
-  const category = await callOpenRouterAPI(messages, modelIdentifier);
-  
-  // Clean up the response
-  return category.replace(/^["']|["']$/g, '').trim();
-}
-
-/**
- * Generates a random ASIN (Amazon Standard Identification Number)
- * @returns Random ASIN
- */
-function generateRandomASIN(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let asin = 'B0';
-  
-  // Generate 8 more random characters
-  for (let i = 0; i < 8; i++) {
-    asin += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  
-  return asin;
 }

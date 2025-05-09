@@ -5,14 +5,14 @@
 
 import OpenAI from "openai";
 import { Product } from "../../shared/schema";
+import { systemPrompts } from "./smart-prompts";
 import { 
-  systemPrompts, 
   generateProductResearchPrompt, 
   generateTitlePrompt, 
   generateDescriptionPrompt, 
   generateBulletPointsPrompt, 
   generateCsvAnalysisPrompt
-} from "./smart-prompts";
+} from "./prompt-utils";
 
 // Initialize OpenAI SDK
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
