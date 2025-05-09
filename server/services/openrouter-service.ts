@@ -12,7 +12,16 @@ const MODEL_MAP: Record<string, string> = {
   'claude': 'anthropic/claude-3-7-sonnet',
   'gemini': 'google/gemini-1.5-pro',
   'mistral': 'mistralai/mistral-large',
-  'llama': 'meta-llama/llama-3-70b-chat'
+  'llama': 'meta-llama/llama-3-70b-chat',
+  // Economy versions with :floor suffix for cost-sensitive operations
+  'gpt4o-economy': 'openai/gpt-4o:floor',
+  'claude-economy': 'anthropic/claude-3-7-sonnet:floor',
+  // Performance versions with :nitro suffix for speed-sensitive operations
+  'gpt4o-performance': 'openai/gpt-4o:nitro',
+  'claude-performance': 'anthropic/claude-3-7-sonnet:nitro',
+  // Online versions with :online suffix for real-time data
+  'gpt4o-online': 'openai/gpt-4o:online',
+  'claude-online': 'anthropic/claude-3-7-sonnet:online'
 };
 
 /**
@@ -22,6 +31,48 @@ const MODEL_MAP: Record<string, string> = {
  * @param modelPreference Preferred AI model to use ('gpt4o', 'claude', 'gemini', etc.)
  * @returns Enhanced product data
  */
+/**
+ * Tool definition for product research to be used with function calling
+ */
+const productResearchTool = {
+  type: "function",
+  function: {
+    name: "product_research",
+    description: "Research and analyze product information to determine product type, features and category",
+    parameters: {
+      type: "object",
+      properties: {
+        productType: {
+          type: "string",
+          description: "The identified type of product based on available information"
+        },
+        keyFeatures: {
+          type: "array",
+          items: { type: "string" },
+          description: "Key features and benefits of the product"
+        },
+        primaryUse: {
+          type: "string",
+          description: "The primary use case for this product"
+        },
+        suggestedCategory: {
+          type: "string",
+          description: "The e-commerce category this product would best fit in"
+        },
+        targetAudience: {
+          type: "string",
+          description: "The target audience or customer demographic for this product"
+        },
+        additionalInfo: {
+          type: "string",
+          description: "Any other relevant information about the product"
+        }
+      },
+      required: ["productType", "keyFeatures", "primaryUse", "suggestedCategory", "targetAudience"]
+    }
+  }
+};
+
 export async function enhanceProductDataWithOpenRouter(
   products: any[], 
   marketplace: string,
@@ -111,14 +162,39 @@ async function callOpenRouterAPI(
       throw new Error('OPENROUTER_API_KEY environment variable is not set');
     }
 
+    // Implement model fallback with the 'models' parameter for reliability
+    const primaryModel = modelIdentifier;
+    
+    // Define fallback models based on the primary model type
+    let fallbackModels = [];
+    if (primaryModel.includes('openai')) {
+      fallbackModels = ['anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
+    } else if (primaryModel.includes('anthropic')) {
+      fallbackModels = ['openai/gpt-4o', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
+    } else if (primaryModel.includes('google')) {
+      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'mistralai/mistral-large'];
+    } else {
+      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro'];
+    }
+    
+    // Add route parameter for provider optimization
+    const route = "fallback"; // Options: "lowest-latency", "lowest-cost", "highest-quality", "fallback"
+    
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: modelIdentifier,
+        model: primaryModel,
+        models: fallbackModels, // Add fallback models for reliability
+        route: route, // Add provider routing for optimal model selection
         messages: messages,
         max_tokens: 1024,
         temperature: 0.7,
-        response_format: { type: "json_object" } // Add structured outputs to get valid JSON
+        response_format: { type: "json_object" }, // Add structured outputs for reliable JSON
+        transforms: ["middle-out"], // Add middle-out compression for handling large contexts
+        web_search: { // Add web search capabilities for real-time data enrichment
+          enable: true,
+          search_results: 3
+        }
       },
       {
         headers: {
@@ -179,31 +255,14 @@ async function researchProductWithOpenRouter(product: any, modelIdentifier: stri
     mpn: product.mpn || ''
   };
   
-  const userMessage = `I need to understand this product better to create marketplace listings:
-${JSON.stringify(productData, null, 2)}
-
-Based on the available information, please research this product and provide:
-1. What type of product is this?
-2. What are its key features and benefits?
-3. What is its primary use case?
-4. What category would it belong to?
-5. Who would be the target audience?
-
-Provide your response as a JSON object with these fields:
-- productType: string
-- keyFeatures: string[]
-- primaryUse: string
-- suggestedCategory: string
-- targetAudience: string
-- additionalInfo: string`;
-
+  // Set up messages with function calling
   const messages = [
     {
       role: "system",
       content: [
         {
           type: "text",
-          text: "You are a product research specialist with expertise in e-commerce optimization and marketplace listings. Your task is to analyze product data and identify what the product is, even with limited information."
+          text: "You are a product research specialist with expertise in e-commerce optimization and marketplace listings. Your task is to analyze product data and identify what the product is, even with limited information. Use real-time information from the web if needed."
         }
       ]
     },
@@ -220,48 +279,142 @@ Provide your response as a JSON object with these fields:
         },
         {
           type: "text",
-          text: `Based on the available information, please research this product and provide:
+          text: `Based on the available information, please research this product and determine:
 1. What type of product is this?
 2. What are its key features and benefits?
 3. What is its primary use case?
 4. What category would it belong to?
 5. Who would be the target audience?
 
-Provide your response as a JSON object with these fields:
-- productType: string
-- keyFeatures: string[]
-- primaryUse: string
-- suggestedCategory: string
-- targetAudience: string
-- additionalInfo: string`
+Use the product_research function to provide your findings.`
         }
       ] 
     }
   ];
   
-  const responseText = await callOpenRouterAPI(messages, modelIdentifier);
+  // Update API params to include tool calling
+  const requestBody = {
+    model: modelIdentifier,
+    messages: messages,
+    tools: [productResearchTool],
+    tool_choice: { type: "function", function: { name: "product_research" } },
+    max_tokens: 1024,
+    temperature: 0.7
+  };
   
   try {
-    // Try to parse the response as JSON
-    let researchData = JSON.parse(responseText);
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    
+    if (!openrouterKey) {
+      throw new Error('OPENROUTER_API_KEY environment variable is not set');
+    }
+    
+    // Define fallback models based on the primary model type
+    let fallbackModels = [];
+    if (modelIdentifier.includes('openai')) {
+      fallbackModels = ['anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
+    } else if (modelIdentifier.includes('anthropic')) {
+      fallbackModels = ['openai/gpt-4o', 'google/gemini-1.5-pro', 'mistralai/mistral-large'];
+    } else if (modelIdentifier.includes('google')) {
+      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'mistralai/mistral-large'];
+    } else {
+      fallbackModels = ['openai/gpt-4o', 'anthropic/claude-3-7-sonnet', 'google/gemini-1.5-pro'];
+    }
+    
+    // Add model routing and provider routing
+    const route = "fallback"; // Options: "lowest-latency", "lowest-cost", "highest-quality", "fallback"
+    
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        ...requestBody,
+        models: fallbackModels,
+        route: route,
+        transforms: ["middle-out"],
+        web_search: {
+          enable: true,
+          search_results: 3
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openrouterKey}`,
+          'HTTP-Referer': 'https://product-enhancer.replit.app', 
+          'X-Title': 'Product Data Enhancer',
+          'Cache-Control': 'max-age=300'
+        }
+      }
+    );
+    
+    // Extract function call results
+    if (response.data.choices[0].message.tool_calls && 
+        response.data.choices[0].message.tool_calls.length > 0) {
+      // Extract function arguments (which contain our research data)
+      const researchData = JSON.parse(response.data.choices[0].message.tool_calls[0].function.arguments);
+      
+      return {
+        ...product,
+        researched: true,
+        productType: researchData.productType,
+        keyFeatures: researchData.keyFeatures,
+        primaryUse: researchData.primaryUse,
+        suggestedCategory: researchData.suggestedCategory,
+        targetAudience: researchData.targetAudience,
+        additionalInfo: researchData.additionalInfo
+      };
+    } else if (response.data.choices[0].message.content) {
+      // Fallback to regular content if function calling not supported
+      try {
+        // Try to parse the response as JSON
+        let researchData = JSON.parse(response.data.choices[0].message.content);
+        return {
+          ...product,
+          researched: true,
+          productType: researchData.productType,
+          keyFeatures: researchData.keyFeatures,
+          primaryUse: researchData.primaryUse,
+          suggestedCategory: researchData.suggestedCategory,
+          targetAudience: researchData.targetAudience,
+          additionalInfo: researchData.additionalInfo
+        };
+      } catch (error) {
+        // If JSON parsing fails, use the text response directly
+        return {
+          ...product,
+          researched: true,
+          researchNotes: response.data.choices[0].message.content
+        };
+      }
+    }
+    
+    // If all else fails, return the product with minimal enhancement
     return {
       ...product,
       researched: true,
-      productType: researchData.productType,
-      keyFeatures: researchData.keyFeatures,
-      primaryUse: researchData.primaryUse,
-      suggestedCategory: researchData.suggestedCategory,
-      targetAudience: researchData.targetAudience,
-      additionalInfo: researchData.additionalInfo
+      researchNotes: "Unable to extract structured research data"
     };
+    
   } catch (error) {
-    console.warn("Could not parse research response as JSON. Using text response.");
-    // If JSON parsing fails, use the text response directly
-    return {
-      ...product,
-      researched: true,
-      researchNotes: responseText
-    };
+    console.error('Product research API call failed:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('API error details:', error.response.data);
+      
+      // Handle credit insufficiency specifically
+      if (error.response.status === 402 || 
+          (error.response.data?.error?.code === 402) || 
+          (error.response.data?.error?.message?.includes('credits'))) {
+        throw new Error('Insufficient OpenRouter credits. Please add more credits or use a different AI provider.');
+      }
+      
+      const errorMessage = error.response.data?.error?.message || 
+                         (typeof error.response.data?.error === 'string' ? error.response.data.error : 
+                         JSON.stringify(error.response.data?.error)) || 
+                         error.message;
+                         
+      throw new Error(`API error: ${errorMessage}`);
+    }
+    throw error;
   }
 }
 
