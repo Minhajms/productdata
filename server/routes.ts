@@ -9,6 +9,7 @@ import { enhanceProductDataWithOpenAI } from "./services/openai-service";
 import { enhanceProductDataWithImprovedPrompts } from "./services/enhanced-openai-service";
 import { enhanceProductDataWithAnthropic } from "./services/anthropic-service";
 import { enhanceProductDataWithOpenRouter } from "./services/openrouter-service";
+import { enhanceProductDataWithOptimizedPrompts } from "./services/enhanced-openrouter-service";
 import { analyzeProductTypes } from "./services/product-detection-service";
 import { analyzeProductData, detectProductTypes, generateEnhancementPrompt } from "./services/intelligent-csv-analyzer";
 import { Product } from "@shared/schema";
@@ -176,7 +177,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Keep track of errors for better error reporting
       const errors = [];
       
-      if (aiProvider === 'openrouter' && openrouterKey) {
+      if (aiProvider === 'optimized' && openrouterKey) {
+        try {
+          console.log(`Using optimized prompts with OpenRouter API for product enhancement`);
+          enhancedProducts = await enhanceProductDataWithOptimizedPrompts(productsToEnhance, marketplace, modelPreference);
+          console.log(`Product enhancement completed successfully with optimized prompts`);
+        } catch (optimizedError: any) {
+          console.error("Optimized prompts error:", optimizedError);
+          errors.push(`Optimized prompts error: ${optimizedError.message || 'Unknown error'}`);
+          
+          // Fall back to standard OpenRouter
+          console.log("Falling back to standard OpenRouter API...");
+          try {
+            enhancedProducts = await enhanceProductDataWithOpenRouter(productsToEnhance, marketplace, modelPreference);
+            console.log(`Product enhancement completed successfully with standard OpenRouter fallback`);
+          } catch (openrouterError: any) {
+            errors.push(`OpenRouter fallback error: ${openrouterError.message || 'Unknown error'}`);
+            throw openrouterError; // Let the next catch block handle further fallbacks
+          }
+        }
+      } else if (aiProvider === 'openrouter' && openrouterKey) {
         try {
           console.log(`Using OpenRouter API with ${modelPreference} model for product enhancement`);
           enhancedProducts = await enhanceProductDataWithOpenRouter(productsToEnhance, marketplace, modelPreference);
