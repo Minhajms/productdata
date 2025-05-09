@@ -23,13 +23,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const marketplace = req.body.marketplace || "Amazon";
+      console.log(`Processing file upload for marketplace: ${marketplace}`);
       
       // Parse CSV content
       const fileContent = req.file.buffer.toString("utf8");
       const products = await parseCSV(fileContent);
       
+      console.log(`Parsed ${products.length} products from CSV`);
+      
+      if (products.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid products found in CSV", 
+          error: "The uploaded file appears to contain no valid product data"
+        });
+      }
+      
       // Save to database
+      console.log("Saving products to database");
       const savedProducts = await storage.saveProducts(products);
+      console.log(`Successfully saved ${savedProducts.length} products to database`);
+      
+      // Verify we have the product data to return
+      if (!savedProducts || savedProducts.length === 0) {
+        console.error("Database saved products but returned empty array");
+        // Try to recover by querying for the products directly
+        const allProducts = await storage.getProducts();
+        
+        if (allProducts && allProducts.length > 0) {
+          console.log(`Recovered ${allProducts.length} products from database after save issue`);
+          return res.json({
+            message: "File uploaded successfully with recovery",
+            products: allProducts
+          });
+        } else {
+          return res.status(500).json({
+            message: "Upload succeeded but failed to retrieve saved products",
+            error: "Database error: Failed to retrieve saved products"
+          });
+        }
+      }
       
       res.json({
         message: "File uploaded successfully",

@@ -28,16 +28,28 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   // Upload file for processing
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
+      console.log("Uploading file...");
       const res = await apiRequest("POST", "/api/upload", formData);
       return res.json();
     },
     onSuccess: (data) => {
+      console.log("Upload success, received data:", data);
       if (data && data.products) {
+        console.log(`Setting ${data.products.length} products`);
         setProductData(data.products);
         
         // Add log message
         addLog(`Starting data analysis for ${data.products.length} products`, "info");
         analyzeData(data.products);
+      } else {
+        console.error("Upload response missing products array:", data);
+        toast({
+          title: "Upload issue",
+          description: "The server accepted the file but returned invalid product data",
+          variant: "destructive"
+        });
+        addLog("Upload response missing product data", "error");
+        setProcessing(false);
       }
     },
     onError: (error: any) => {
