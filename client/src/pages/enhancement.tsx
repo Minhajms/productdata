@@ -25,6 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { TransformationAnimation } from "@/components/ui/transformation-animation";
 
 interface EnhancementProps {
@@ -49,7 +50,7 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
   const [editMode, setEditMode] = useState(false);
   const [showTransformationAnimation, setShowTransformationAnimation] = useState(false);
   const [animationPlaying, setAnimationPlaying] = useState(false);
-  const [animationFieldToShow, setAnimationFieldToShow] = useState<string>("all");
+  const [animationFieldToShow, setAnimationFieldToShow] = useState<'all' | 'title' | 'description' | 'bulletPoints'>('all');
   
   // Initialize enhanced products with original data
   useEffect(() => {
@@ -673,7 +674,11 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
                       <Label htmlFor="animationField" className="text-sm">Field to Animate</Label>
                       <Select 
                         value={animationFieldToShow}
-                        onValueChange={setAnimationFieldToShow}
+                        onValueChange={(value: string) => {
+                          if (value === 'all' || value === 'title' || value === 'description' || value === 'bulletPoints') {
+                            setAnimationFieldToShow(value);
+                          }
+                        }}
                       >
                         <SelectTrigger id="animationField">
                           <SelectValue placeholder="Select field" />
