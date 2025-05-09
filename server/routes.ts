@@ -3,8 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { parseCSV, generateCSV } from "./services/csv-service";
+import { parseCSVWithAI } from "./services/enhanced-csv-service";
 import { enhanceProductData } from "./services/gemini-service";
 import { enhanceProductDataWithOpenAI } from "./services/openai-service";
+import { enhanceProductDataWithImprovedPrompts } from "./services/enhanced-openai-service";
 import { analyzeProductTypes } from "./services/product-detection-service";
 import { Product } from "@shared/schema";
 
