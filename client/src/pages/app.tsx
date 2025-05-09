@@ -40,6 +40,9 @@ export function ApplicationPage() {
       
       const data = await response.json();
       
+      // Debug the response data
+      console.log(`Received ${data.products?.length || 0} products from server:`, data.products);
+      
       // Set products from response
       setProducts(data.products);
       
@@ -129,7 +132,7 @@ export function ApplicationPage() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-        return <Upload onFileUpload={handleMockFileUpload} />;
+        return <Upload onFileUpload={handleFileUpload} />;
       case 1:
         return <Analysis products={products} onAnalysisComplete={handleAnalysisComplete} />;
       case 2:
@@ -149,7 +152,7 @@ export function ApplicationPage() {
           />
         );
       default:
-        return <Upload onFileUpload={handleMockFileUpload} />;
+        return <Upload onFileUpload={handleFileUpload} />;
     }
   };
   
