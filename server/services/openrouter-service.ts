@@ -292,14 +292,36 @@ async function generateTitleWithOpenRouter(
 - Keep it under ${maxLength} characters
 - Focus on clarity and searchability`;
 
-  const userPrompt = `Create an optimized product title for this product:
-${JSON.stringify(product, null, 2)}
-
-Respond ONLY with the title text. Do NOT include any explanations.`;
-
   const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt }
+    { 
+      role: "system", 
+      content: [
+        {
+          type: "text",
+          text: systemPrompt
+        }
+      ]
+    },
+    { 
+      role: "user", 
+      content: [
+        {
+          type: "text",
+          text: "Create an optimized product title for this product:"
+        },
+        {
+          type: "text",
+          text: JSON.stringify(product, null, 2),
+          cache_control: {
+            type: "ephemeral"
+          }
+        },
+        {
+          type: "text",
+          text: "Respond ONLY with the title text. Do NOT include any explanations."
+        }
+      ] 
+    }
   ];
   
   const title = await callOpenRouterAPI(messages, modelIdentifier);
@@ -475,14 +497,36 @@ async function suggestBrandWithOpenRouter(product: any, modelIdentifier: string)
   
   const systemPrompt = "You are a brand specialist. Your task is to identify or suggest an appropriate brand name for a product based on the provided information. If a brand name is already present in the data, extract and return it. If not, suggest a suitable brand name that fits the product category and characteristics.";
 
-  const userPrompt = `Based on this product information, what would be an appropriate brand name?
-${JSON.stringify(product, null, 2)}
-
-Respond ONLY with the brand name. Keep it short and appropriate for the product category. Do NOT include any explanations.`;
-
   const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt }
+    { 
+      role: "system", 
+      content: [
+        {
+          type: "text",
+          text: systemPrompt
+        }
+      ]
+    },
+    { 
+      role: "user", 
+      content: [
+        {
+          type: "text",
+          text: "Based on this product information, what would be an appropriate brand name?"
+        },
+        {
+          type: "text",
+          text: JSON.stringify(product, null, 2),
+          cache_control: {
+            type: "ephemeral"
+          }
+        },
+        {
+          type: "text",
+          text: "Respond ONLY with the brand name. Keep it short and appropriate for the product category. Do NOT include any explanations."
+        }
+      ] 
+    }
   ];
   
   const brand = await callOpenRouterAPI(messages, modelIdentifier);
@@ -510,14 +554,36 @@ async function suggestCategoryWithOpenRouter(
 - Standard ${marketplace} category naming conventions
 - The most specific appropriate category (not too broad)`;
 
-  const userPrompt = `Based on this product information, what would be the most appropriate ${marketplace} category?
-${JSON.stringify(product, null, 2)}
-
-Respond ONLY with the category name. Do NOT include any explanations.`;
-
   const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt }
+    { 
+      role: "system", 
+      content: [
+        {
+          type: "text",
+          text: systemPrompt
+        }
+      ]
+    },
+    { 
+      role: "user", 
+      content: [
+        {
+          type: "text",
+          text: `Based on this product information, what would be the most appropriate ${marketplace} category?`
+        },
+        {
+          type: "text",
+          text: JSON.stringify(product, null, 2),
+          cache_control: {
+            type: "ephemeral"
+          }
+        },
+        {
+          type: "text",
+          text: "Respond ONLY with the category name. Do NOT include any explanations."
+        }
+      ] 
+    }
   ];
   
   const category = await callOpenRouterAPI(messages, modelIdentifier);
