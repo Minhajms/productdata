@@ -70,11 +70,23 @@ export async function enhanceProductDataWithOpenRouter(
       enhancedProducts.push(enhancedProduct);
     } catch (error) {
       console.error(`Error enhancing product ${product.product_id}:`, error);
-      // If enhancement fails, include the original product with an error status
+      // If enhancement fails, include the original product with an error status and fallback content
+      // This ensures we return something usable even if some products fail
+      let errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Generate minimal fallback content if available data is very limited
+      const fallbackTitle = product.title || product.name || 
+                          `${product.brand || 'Quality'} ${product.category || 'Product'}`;
+      const fallbackDescription = product.description || 
+                              `High-quality ${product.category || 'product'} ${product.brand ? `from ${product.brand}` : ''}.`;
+      
       enhancedProducts.push({
         ...product,
-        status: 'error',
-        enhancement_error: error instanceof Error ? error.message : 'Unknown error'
+        title: product.title || fallbackTitle,
+        description: product.description || fallbackDescription,
+        status: 'partial',
+        enhancement_error: errorMessage,
+        enhancement_note: 'This product was partially processed due to API limitations. Some fields may require manual editing.'
       });
     }
   }
@@ -123,7 +135,21 @@ async function callOpenRouterAPI(
     console.error('OpenRouter API call failed:', error);
     if (axios.isAxiosError(error) && error.response) {
       console.error('OpenRouter API error details:', error.response.data);
-      throw new Error(`OpenRouter API error: ${error.response.data.error || error.message}`);
+      
+      // Handle credit insufficiency specifically
+      if (error.response.status === 402 || 
+          (error.response.data?.error?.code === 402) || 
+          (error.response.data?.error?.message?.includes('credits'))) {
+        throw new Error('Insufficient OpenRouter credits. Please add more credits or use a different AI provider.');
+      }
+      
+      // Better error handling for other cases
+      const errorMessage = error.response.data?.error?.message || 
+                           (typeof error.response.data?.error === 'string' ? error.response.data.error : 
+                           JSON.stringify(error.response.data?.error)) || 
+                           error.message;
+                           
+      throw new Error(`OpenRouter API error: ${errorMessage}`);
     }
     throw error;
   }

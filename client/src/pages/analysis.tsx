@@ -86,7 +86,13 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   });
   
   const enhanceMutation = useMutation({
-    mutationFn: async (payload: { products?: Product[], productIds?: string[], marketplace: string }) => {
+    mutationFn: async (payload: { 
+      products?: Product[], 
+      productIds?: string[], 
+      marketplace: string,
+      aiProvider?: string,
+      modelPreference?: string
+    }) => {
       console.log("Enhancing products with payload:", payload);
       const res = await apiRequest("POST", "/api/enhance", payload);
       return res.json();
@@ -122,7 +128,9 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
             if (errorMessage.includes("API key") || 
                 errorMessage.includes("quota") || 
                 errorMessage.includes("rate limit") ||
-                errorMessage.includes("exceeded")) {
+                errorMessage.includes("exceeded") ||
+                errorMessage.includes("credit") ||
+                errorMessage.includes("OpenRouter")) {
               
               // API key or quota issues
               suggestedAction = "There might be an issue with the AI service API key or quota limits. The system is using fallback content generation for some products.";

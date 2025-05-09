@@ -152,36 +152,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("OpenRouter API error:", openrouterError);
           errors.push(`OpenRouter error: ${openrouterError.message || 'Unknown error'}`);
           
-          // Try individual provider APIs as fallback based on modelPreference
-          if (modelPreference === 'claude' && anthropicKey) {
-            console.log("Falling back to direct Anthropic API");
+          // Detect insufficient credits error
+          const insufficientCredits = 
+            openrouterError.message.includes('Insufficient credits') || 
+            openrouterError.message.includes('402');
+            
+          if (insufficientCredits) {
+            console.log("OpenRouter has insufficient credits. Trying alternative AI providers...");
+          }
+          
+          // Try the best available alternative based on which keys we have
+          if (openaiKey) {
+            console.log("Falling back to OpenAI API (recommended alternative)");
+            try {
+              // Use enhanced OpenAI prompts
+              enhancedProducts = await enhanceProductDataWithImprovedPrompts(productsToEnhance, marketplace);
+              console.log("Product enhancement completed successfully with OpenAI fallback");
+            } catch (fallbackError: any) {
+              errors.push(`OpenAI fallback error: ${fallbackError.message || 'Unknown error'}`);
+              
+              // If OpenAI fails, try any other available API
+              if (anthropicKey) {
+                console.log("Trying Anthropic API as second fallback");
+                try {
+                  enhancedProducts = await enhanceProductDataWithAnthropic(productsToEnhance, marketplace);
+                  console.log("Product enhancement completed successfully with Anthropic fallback");
+                } catch (secondFallbackError: any) {
+                  errors.push(`Anthropic fallback error: ${secondFallbackError.message || 'Unknown error'}`);
+                }
+              } else if (geminiKey) {
+                console.log("Trying Gemini API as second fallback");
+                try {
+                  enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
+                  console.log("Product enhancement completed successfully with Gemini fallback");
+                } catch (secondFallbackError: any) {
+                  errors.push(`Gemini fallback error: ${secondFallbackError.message || 'Unknown error'}`);
+                }
+              }
+              
+              // If we still don't have enhanced products, rethrow
+              if (!enhancedProducts) {
+                throw new Error(`All fallback strategies failed. OpenRouter: ${openrouterError.message}, OpenAI: ${fallbackError.message}`);
+              }
+            }
+          } else if (anthropicKey) {
+            console.log("Falling back to Anthropic API");
             try {
               enhancedProducts = await enhanceProductDataWithAnthropic(productsToEnhance, marketplace);
               console.log("Product enhancement completed successfully with Anthropic fallback");
             } catch (fallbackError: any) {
               errors.push(`Anthropic fallback error: ${fallbackError.message || 'Unknown error'}`);
-              throw new Error(`Both OpenRouter and Anthropic fallback failed: ${openrouterError.message}, fallback: ${fallbackError.message}`);
+              
+              // If Anthropic fails, try Gemini if available
+              if (geminiKey) {
+                console.log("Trying Gemini API as second fallback");
+                try {
+                  enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
+                  console.log("Product enhancement completed successfully with Gemini fallback");
+                } catch (secondFallbackError: any) {
+                  errors.push(`Gemini fallback error: ${secondFallbackError.message || 'Unknown error'}`);
+                  throw new Error(`All fallback strategies failed. OpenRouter: ${openrouterError.message}, Anthropic: ${fallbackError.message}, Gemini: ${secondFallbackError.message}`);
+                }
+              } else {
+                throw new Error(`Both OpenRouter and Anthropic failed. OpenRouter: ${openrouterError.message}, Anthropic: ${fallbackError.message}`);
+              }
             }
-          } else if ((modelPreference === 'gpt4o' || modelPreference === 'openai') && openaiKey) {
-            console.log("Falling back to direct OpenAI API");
-            try {
-              enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
-              console.log("Product enhancement completed successfully with OpenAI fallback");
-            } catch (fallbackError: any) {
-              errors.push(`OpenAI fallback error: ${fallbackError.message || 'Unknown error'}`);
-              throw new Error(`Both OpenRouter and OpenAI fallback failed: ${openrouterError.message}, fallback: ${fallbackError.message}`);
-            }
-          } else if (modelPreference === 'gemini' && geminiKey) {
-            console.log("Falling back to direct Gemini API");
+          } else if (geminiKey) {
+            console.log("Falling back to Gemini API");
             try {
               enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
               console.log("Product enhancement completed successfully with Gemini fallback");
             } catch (fallbackError: any) {
               errors.push(`Gemini fallback error: ${fallbackError.message || 'Unknown error'}`);
-              throw new Error(`Both OpenRouter and Gemini fallback failed: ${openrouterError.message}, fallback: ${fallbackError.message}`);
+              throw new Error(`Both OpenRouter and Gemini failed. OpenRouter: ${openrouterError.message}, Gemini: ${fallbackError.message}`);
             }
           } else {
-            throw new Error(`OpenRouter enhancement failed and no suitable direct API fallback was available: ${openrouterError.message}`);
+            throw new Error(`OpenRouter enhancement failed and no alternative API keys are available. Please add funds to your OpenRouter account or provide another API key (OpenAI, Anthropic, or Gemini).`);
           }
         }
       } else if (aiProvider === 'anthropic' && anthropicKey) {
