@@ -216,10 +216,7 @@ Provide your response as a JSON object with these fields:
         },
         {
           type: "text",
-          text: JSON.stringify(productData, null, 2),
-          cache_control: {
-            type: "ephemeral"
-          }
+          text: JSON.stringify(productData, null, 2)
         },
         {
           type: "text",
