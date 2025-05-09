@@ -7,6 +7,8 @@ import { parseCSVWithAI } from "./services/enhanced-csv-service";
 import { enhanceProductData } from "./services/gemini-service";
 import { enhanceProductDataWithOpenAI } from "./services/openai-service";
 import { enhanceProductDataWithImprovedPrompts } from "./services/enhanced-openai-service";
+import { enhanceProductDataWithAnthropic } from "./services/anthropic-service";
+import { enhanceProductDataWithOpenRouter } from "./services/openrouter-service";
 import { analyzeProductTypes } from "./services/product-detection-service";
 import { Product } from "@shared/schema";
 
@@ -133,23 +135,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let enhancedProducts;
       const openaiKey = process.env.OPENAI_API_KEY;
       const geminiKey = process.env.GEMINI_API_KEY;
-      const useEnhancedAI = req.body.useEnhancedAI === 'true';
+      const anthropicKey = process.env.ANTHROPIC_API_KEY;
+      const openrouterKey = process.env.OPENROUTER_API_KEY;
+      const aiProvider = req.body.aiProvider || 'openrouter'; // Options: 'openrouter', 'openai', 'gemini', 'anthropic', 'enhanced'
+      const modelPreference = req.body.modelPreference || 'gpt4o'; // Options: 'gpt4o', 'gemini', 'claude', 'mistral', 'llama'
       
       // Keep track of errors for better error reporting
       const errors = [];
       
-      // Try to use OpenAI first, fall back to Gemini if OpenAI fails
-      if (openaiKey) {
+      if (aiProvider === 'openrouter' && openrouterKey) {
         try {
-          if (useEnhancedAI) {
-            console.log("Using Enhanced OpenAI API for product enhancement");
-            enhancedProducts = await enhanceProductDataWithImprovedPrompts(productsToEnhance, marketplace);
-            console.log("Product enhancement completed successfully with Enhanced OpenAI");
+          console.log(`Using OpenRouter API with ${modelPreference} model for product enhancement`);
+          enhancedProducts = await enhanceProductDataWithOpenRouter(productsToEnhance, marketplace, modelPreference);
+          console.log(`Product enhancement completed successfully with OpenRouter (${modelPreference} model)`);
+        } catch (openrouterError: any) {
+          console.error("OpenRouter API error:", openrouterError);
+          errors.push(`OpenRouter error: ${openrouterError.message || 'Unknown error'}`);
+          
+          // Try individual provider APIs as fallback based on modelPreference
+          if (modelPreference === 'claude' && anthropicKey) {
+            console.log("Falling back to direct Anthropic API");
+            try {
+              enhancedProducts = await enhanceProductDataWithAnthropic(productsToEnhance, marketplace);
+              console.log("Product enhancement completed successfully with Anthropic fallback");
+            } catch (fallbackError: any) {
+              errors.push(`Anthropic fallback error: ${fallbackError.message || 'Unknown error'}`);
+              throw new Error(`Both OpenRouter and Anthropic fallback failed: ${openrouterError.message}, fallback: ${fallbackError.message}`);
+            }
+          } else if ((modelPreference === 'gpt4o' || modelPreference === 'openai') && openaiKey) {
+            console.log("Falling back to direct OpenAI API");
+            try {
+              enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
+              console.log("Product enhancement completed successfully with OpenAI fallback");
+            } catch (fallbackError: any) {
+              errors.push(`OpenAI fallback error: ${fallbackError.message || 'Unknown error'}`);
+              throw new Error(`Both OpenRouter and OpenAI fallback failed: ${openrouterError.message}, fallback: ${fallbackError.message}`);
+            }
+          } else if (modelPreference === 'gemini' && geminiKey) {
+            console.log("Falling back to direct Gemini API");
+            try {
+              enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
+              console.log("Product enhancement completed successfully with Gemini fallback");
+            } catch (fallbackError: any) {
+              errors.push(`Gemini fallback error: ${fallbackError.message || 'Unknown error'}`);
+              throw new Error(`Both OpenRouter and Gemini fallback failed: ${openrouterError.message}, fallback: ${fallbackError.message}`);
+            }
           } else {
-            console.log("Using OpenAI API for product enhancement");
-            enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
-            console.log("Product enhancement completed successfully with OpenAI");
+            throw new Error(`OpenRouter enhancement failed and no suitable direct API fallback was available: ${openrouterError.message}`);
           }
+        }
+      } else if (aiProvider === 'anthropic' && anthropicKey) {
+        try {
+          console.log("Using Anthropic Claude API for product enhancement");
+          enhancedProducts = await enhanceProductDataWithAnthropic(productsToEnhance, marketplace);
+          console.log("Product enhancement completed successfully with Anthropic Claude");
+        } catch (anthropicError: any) {
+          console.error("Anthropic API error:", anthropicError);
+          errors.push(`Anthropic error: ${anthropicError.message || 'Unknown error'}`);
+          
+          // Try OpenAI as fallback if available
+          if (openaiKey) {
+            console.log("Falling back to OpenAI for product enhancement");
+            try {
+              enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
+              console.log("Product enhancement completed successfully with OpenAI fallback");
+            } catch (openaiError: any) {
+              errors.push(`OpenAI error: ${openaiError.message || 'Unknown error'}`);
+              throw new Error(`Both Anthropic and OpenAI enhancement failed. Anthropic: ${anthropicError.message}, OpenAI: ${openaiError.message}`);
+            }
+          } else {
+            throw new Error(`Anthropic enhancement failed and no OpenAI API key available. Error: ${anthropicError.message}`);
+          }
+        }
+      } else if (aiProvider === 'enhanced' && openaiKey) {
+        try {
+          console.log("Using Enhanced OpenAI API for product enhancement");
+          enhancedProducts = await enhanceProductDataWithImprovedPrompts(productsToEnhance, marketplace);
+          console.log("Product enhancement completed successfully with Enhanced OpenAI");
+        } catch (openaiError: any) {
+          console.error("Enhanced OpenAI API error:", openaiError);
+          errors.push(`Enhanced OpenAI error: ${openaiError.message || 'Unknown error'}`);
+          
+          // Try regular OpenAI as fallback
+          console.log("Falling back to standard OpenAI");
+          try {
+            enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
+            console.log("Product enhancement completed successfully with standard OpenAI fallback");
+          } catch (fallbackError: any) {
+            errors.push(`OpenAI fallback error: ${fallbackError.message || 'Unknown error'}`);
+            throw new Error(`Both Enhanced and standard OpenAI enhancement failed: ${openaiError.message}, fallback: ${fallbackError.message}`);
+          }
+        }
+      } else if (aiProvider === 'gemini' && geminiKey) {
+        try {
+          console.log("Using Gemini API for product enhancement");
+          enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
+          console.log("Product enhancement completed successfully with Gemini");
+        } catch (geminiError: any) {
+          console.error("Gemini API error:", geminiError);
+          errors.push(`Gemini error: ${geminiError.message || 'Unknown error'}`);
+
+          // Try OpenAI as fallback if available
+          if (openaiKey) {
+            console.log("Falling back to OpenAI for product enhancement");
+            try {
+              enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
+              console.log("Product enhancement completed successfully with OpenAI fallback");
+            } catch (openaiError: any) {
+              errors.push(`OpenAI error: ${openaiError.message || 'Unknown error'}`);
+              throw new Error(`Both Gemini and OpenAI enhancement failed. Gemini: ${geminiError.message}, OpenAI: ${openaiError.message}`);
+            }
+          } else {
+            throw new Error(`Gemini enhancement failed and no OpenAI API key available. Error: ${geminiError.message}`);
+          }
+        }
+      } 
+      // Default to OpenAI if available
+      else if (openaiKey) {
+        try {
+          console.log("Using OpenAI API for product enhancement");
+          enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
+          console.log("Product enhancement completed successfully with OpenAI");
         } catch (openaiError: any) {
           console.error("OpenAI API error:", openaiError);
           errors.push(`OpenAI error: ${openaiError.message || 'Unknown error'}`);
@@ -185,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // No API keys available
-        throw new Error("No API keys available for product enhancement. Please set either OPENAI_API_KEY or GEMINI_API_KEY in environment variables.");
+        throw new Error("No API keys available for product enhancement. Please set one of the following API keys in environment variables: OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY.");
       }
       
       // If we don't have enhanced products at this point, something went wrong
