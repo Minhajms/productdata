@@ -1,10 +1,11 @@
-import { ChangeEvent, useCallback, useState } from "react";
+import { ChangeEvent, useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn, formatFileSize } from "@/lib/utils";
-import { Upload, AlertCircle, FileSpreadsheet, X, Download } from "lucide-react";
+import { Upload, AlertCircle, FileSpreadsheet, X, Download, CheckCircle, FileIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
 interface FileUploaderProps {
   onFileUpload: (file: File) => void;
@@ -19,10 +20,35 @@ export function FileUploader({
 }: FileUploaderProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  // Simulate upload progress for better UX
+  useEffect(() => {
+    if (isUploading && uploadProgress < 100) {
+      const timer = setTimeout(() => {
+        setUploadProgress((prevProgress) => {
+          const increment = Math.floor(Math.random() * 15) + 5;
+          const newProgress = Math.min(prevProgress + increment, 100);
+          
+          if (newProgress === 100) {
+            setIsUploading(false);
+            setIsSuccess(true);
+          }
+          
+          return newProgress;
+        });
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isUploading, uploadProgress]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       setError(null);
+      setIsSuccess(false);
       const file = acceptedFiles[0];
       
       if (!file) return;
@@ -38,13 +64,20 @@ export function FileUploader({
         return;
       }
       
+      // Start simulated upload
+      setIsUploading(true);
+      setUploadProgress(0);
       setSelectedFile(file);
-      onFileUpload(file);
+      
+      // Simulate a slight delay before calling onFileUpload for better UX
+      setTimeout(() => {
+        onFileUpload(file);
+      }, 1200);
     },
     [maxSize, acceptedFileTypes, onFileUpload]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
     onDrop,
     accept: {
       'text/csv': acceptedFileTypes
@@ -62,6 +95,8 @@ export function FileUploader({
 
   const removeFile = () => {
     setSelectedFile(null);
+    setIsSuccess(false);
+    setUploadProgress(0);
   };
 
   const downloadTemplate = () => {
@@ -85,33 +120,110 @@ export function FileUploader({
         <div
           {...getRootProps()}
           className={cn(
-            "drag-drop-zone rounded-lg p-8 mb-6 flex flex-col items-center justify-center cursor-pointer",
-            isDragActive && "active"
+            "border-2 border-dashed rounded-lg transition-all duration-150 p-8 mb-6 flex flex-col items-center justify-center cursor-pointer",
+            isDragActive && !isDragReject && "border-blue-400 bg-blue-50",
+            isDragReject && "border-red-400 bg-red-50",
+            isDragAccept && "border-green-400 bg-green-50",
+            !isDragActive && "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50"
           )}
         >
           <input {...getInputProps()} onChange={handleFileChange} />
-          <Upload className="h-16 w-16 text-gray-400 mb-4" />
-          <p className="text-gray-500 mb-2 text-center">Drag and drop your CSV file here</p>
-          <p className="text-gray-400 text-sm mb-4 text-center">or</p>
-          <Button>
-            Browse Files
+          <div className="w-20 h-20 mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+            <Upload className="h-10 w-10 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Drop your CSV file here</h3>
+          <p className="text-gray-500 mb-4 text-center max-w-md">
+            Your product data will be analyzed and enhanced automatically
+          </p>
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            Select CSV File
           </Button>
           <p className="text-gray-400 text-xs mt-4">Maximum file size: {formatFileSize(maxSize)}</p>
+          
+          <div className="grid grid-cols-3 gap-6 mt-8 max-w-lg">
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-blue-100 mx-auto flex items-center justify-center">
+                <FileIcon className="h-5 w-5 text-blue-600" />
+              </div>
+              <p className="text-xs text-gray-600 mt-2">Upload CSV</p>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-blue-100 mx-auto flex items-center justify-center opacity-60">
+                <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+              </div>
+              <p className="text-xs text-gray-600 mt-2">AI Enhancement</p>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-blue-100 mx-auto flex items-center justify-center opacity-60">
+                <Download className="h-5 w-5 text-blue-600" />
+              </div>
+              <p className="text-xs text-gray-600 mt-2">Export</p>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="mb-6">
-          <Card>
-            <CardContent className="p-4 flex justify-between items-center">
-              <div className="flex items-center">
-                <FileSpreadsheet className="h-8 w-8 text-primary mr-3" />
-                <div>
-                  <p className="font-medium text-sm">{selectedFile.name}</p>
-                  <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
+          <Card className={cn(
+            "border",
+            isSuccess && "border-green-200 shadow-sm"
+          )}>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center">
+                  <div className={cn(
+                    "h-10 w-10 rounded-full flex items-center justify-center mr-3",
+                    isSuccess ? "bg-green-100" : "bg-blue-100"
+                  )}>
+                    {isSuccess ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">{selectedFile.name}</p>
+                    <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                  </div>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-gray-400 hover:text-gray-600" 
+                  onClick={removeFile}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <Button variant="ghost" size="icon" onClick={removeFile}>
-                <X className="h-4 w-4" />
-              </Button>
+              
+              {(isUploading || uploadProgress > 0) && (
+                <div className="mt-2">
+                  <div className="flex justify-between items-center mb-1 text-xs">
+                    <span className="text-gray-600 font-medium">
+                      {isSuccess ? "Uploaded successfully!" : "Uploading..."}
+                    </span>
+                    <span className="text-gray-600">{uploadProgress}%</span>
+                  </div>
+                  <Progress 
+                    value={uploadProgress} 
+                    className={cn(
+                      "h-2", 
+                      isSuccess && "bg-green-100"
+                    )} 
+                    indicatorClassName={isSuccess ? "bg-green-500" : undefined}
+                  />
+                </div>
+              )}
+              
+              {isSuccess && (
+                <div className="mt-4 p-3 bg-green-50 rounded-md border border-green-100 text-sm text-green-800">
+                  <div className="flex">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
+                    <p>
+                      Your file has been uploaded successfully. Now our AI will process your data to create enhanced listings.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -125,41 +237,44 @@ export function FileUploader({
         </Alert>
       )}
 
-      <Card className="bg-gray-50">
-        <CardContent className="p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Recommended CSV Format</h3>
-          <p className="text-gray-500 text-sm mb-3">For best results, your CSV should include these columns:</p>
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              product_id
-            </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              title
-            </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              description
-            </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              price
-            </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              category
-            </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              brand
-            </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              images
-            </span>
+      <Card className="bg-gradient-to-b from-white to-gray-50 border shadow-sm">
+        <CardContent className="p-5">
+          <div className="flex items-center mb-3">
+            <Download className="h-5 w-5 text-blue-600 mr-2" />
+            <h3 className="text-sm font-medium text-gray-700">Need a template to get started?</h3>
           </div>
-          <div className="mt-3">
+          
+          <p className="text-gray-600 text-sm mb-4">
+            For best results, your CSV should include these columns:
+          </p>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            <div className="bg-white rounded border border-gray-200 px-3 py-2">
+              <span className="text-xs font-semibold text-gray-600 block mb-0.5">product_id</span>
+              <span className="text-xs text-gray-500">Unique identifier</span>
+            </div>
+            <div className="bg-white rounded border border-gray-200 px-3 py-2">
+              <span className="text-xs font-semibold text-gray-600 block mb-0.5">title</span>
+              <span className="text-xs text-gray-500">Product name</span>
+            </div>
+            <div className="bg-white rounded border border-gray-200 px-3 py-2">
+              <span className="text-xs font-semibold text-gray-600 block mb-0.5">description</span>
+              <span className="text-xs text-gray-500">Basic details</span>
+            </div>
+            <div className="bg-white rounded border border-gray-200 px-3 py-2">
+              <span className="text-xs font-semibold text-gray-600 block mb-0.5">price</span>
+              <span className="text-xs text-gray-500">Product price</span>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
             <Button
-              variant="link"
-              className="p-0 h-auto text-primary hover:text-primary/80 text-sm font-medium flex items-center"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
               onClick={downloadTemplate}
             >
-              <Download className="h-4 w-4 mr-1" />
-              Download Template
+              <Download className="h-4 w-4 mr-2" />
+              Download Template CSV
             </Button>
           </div>
         </CardContent>
