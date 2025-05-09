@@ -4,7 +4,13 @@
  * through each step of the product enhancement workflow.
  */
 
-import { MarketplaceRequirement } from '../lib/marketplace-requirements';
+// Define the MarketplaceRequirement interface here to avoid circular dependencies
+interface MarketplaceRequirement {
+  field: string;
+  display: string;
+  required: boolean;
+  description?: string;
+}
 
 // Base system prompts for different context scenarios
 export const systemPrompts = {

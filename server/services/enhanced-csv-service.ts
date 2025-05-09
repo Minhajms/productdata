@@ -31,7 +31,8 @@ export async function parseCSVWithAI(csvString: string): Promise<Product[]> {
             }
             
             // Get column names
-            const columnNames = Object.keys(results.data[0]);
+            const firstRow = results.data[0] as Record<string, unknown>;
+            const columnNames = Object.keys(firstRow);
             console.log("CSV columns:", columnNames.join(", "));
             
             // Take a sample of rows for AI analysis (limit to save token usage)
@@ -92,9 +93,10 @@ export async function parseCSVWithAI(csvString: string): Promise<Product[]> {
             
             console.log(`Successfully created ${products.length} product objects from CSV`);
             resolve(products);
-          } catch (error) {
+          } catch (error: any) {
             console.error("Error during AI-enhanced CSV processing:", error);
-            reject(new Error(`Failed to process CSV with AI enhancement: ${error.message}`));
+            const errorMessage = error?.message || 'Unknown error';
+            reject(new Error(`Failed to process CSV with AI enhancement: ${errorMessage}`));
           }
         },
         error: (error: any) => {
@@ -103,9 +105,10 @@ export async function parseCSVWithAI(csvString: string): Promise<Product[]> {
           reject(new Error(`Failed to parse CSV: ${message}`));
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Exception during CSV parsing setup:", error);
-      reject(new Error(`Failed to set up CSV parsing: ${error.message}`));
+      const errorMessage = error?.message || 'Unknown error';
+      reject(new Error(`Failed to set up CSV parsing: ${errorMessage}`));
     }
   });
 }
@@ -149,8 +152,13 @@ function mapCSVRowToProduct(row: any, product: Product, fieldMappings: Record<st
       }
     }
     else if (mappedField in product) {
-      // Assign value to mapped field if it exists in the product object
-      product[mappedField as keyof Product] = strValue;
+      // Handle field type matching based on expected type
+      // For string-type fields only - exclude arrays and dates
+      const stringFields = ['product_id', 'title', 'description', 'brand', 'category', 'asin', 'material', 'color', 'status', 'price'];
+      if (stringFields.includes(mappedField)) {
+        // Safe to assign string to string fields
+        (product as any)[mappedField] = strValue;
+      }
     }
   }
 }

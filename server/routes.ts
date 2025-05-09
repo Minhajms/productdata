@@ -29,7 +29,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse CSV content
       const fileContent = req.file.buffer.toString("utf8");
-      const products = await parseCSV(fileContent);
+      
+      // Check if AI-enhanced parsing is requested
+      const useAI = req.body.useAI === 'true';
+      let products;
+      
+      if (useAI) {
+        console.log("Using AI-enhanced CSV parsing");
+        try {
+          products = await parseCSVWithAI(fileContent);
+        } catch (aiError) {
+          console.error("AI-enhanced CSV parsing failed:", aiError);
+          console.log("Falling back to standard CSV parsing");
+          products = await parseCSV(fileContent);
+        }
+      } else {
+        products = await parseCSV(fileContent);
+      }
       
       console.log(`Parsed ${products.length} products from CSV`);
       
@@ -117,6 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let enhancedProducts;
       const openaiKey = process.env.OPENAI_API_KEY;
       const geminiKey = process.env.GEMINI_API_KEY;
+      const useEnhancedAI = req.body.useEnhancedAI === 'true';
       
       // Keep track of errors for better error reporting
       const errors = [];
@@ -124,11 +141,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try to use OpenAI first, fall back to Gemini if OpenAI fails
       if (openaiKey) {
         try {
-          console.log("Using OpenAI API for product enhancement");
-          enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
-          
-          // If we got here, OpenAI worked successfully (either with API or fallback mechanism)
-          console.log("Product enhancement completed successfully with OpenAI");
+          if (useEnhancedAI) {
+            console.log("Using Enhanced OpenAI API for product enhancement");
+            enhancedProducts = await enhanceProductDataWithImprovedPrompts(productsToEnhance, marketplace);
+            console.log("Product enhancement completed successfully with Enhanced OpenAI");
+          } else {
+            console.log("Using OpenAI API for product enhancement");
+            enhancedProducts = await enhanceProductDataWithOpenAI(productsToEnhance, marketplace);
+            console.log("Product enhancement completed successfully with OpenAI");
+          }
         } catch (openaiError: any) {
           console.error("OpenAI API error:", openaiError);
           errors.push(`OpenAI error: ${openaiError.message || 'Unknown error'}`);
