@@ -177,17 +177,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Keep track of errors for better error reporting
       const errors = [];
       
-      if (aiProvider === 'optimized' && openrouterKey) {
+      if (aiProvider === 'optimized') {
         try {
-          console.log(`Using optimized prompts with OpenRouter API for product enhancement`);
-          enhancedProducts = await enhanceProductDataWithOptimizedPrompts(productsToEnhance, marketplace, modelPreference);
-          console.log(`Product enhancement completed successfully with optimized prompts`);
+          // Try with OpenRouter first if the key is available
+          if (openrouterKey) {
+            console.log(`Using optimized prompts with OpenRouter API for product enhancement`);
+            enhancedProducts = await enhanceProductDataWithOptimizedPrompts(productsToEnhance, marketplace, modelPreference);
+            console.log(`Product enhancement completed successfully with optimized prompts`);
+          } else if (anthropicKey) {
+            // If no OpenRouter key, try with Anthropic
+            console.log(`Using Anthropic Claude API for product enhancement (optimized prompts)`);
+            enhancedProducts = await enhanceProductDataWithAnthropic(productsToEnhance, marketplace);
+            console.log(`Product enhancement completed successfully with Anthropic Claude`);
+          } else if (openaiKey) {
+            // If no Anthropic key, try with OpenAI
+            console.log(`Using Enhanced OpenAI API for product enhancement (optimized prompts)`);
+            enhancedProducts = await enhanceProductDataWithImprovedPrompts(productsToEnhance, marketplace);
+            console.log(`Product enhancement completed successfully with Enhanced OpenAI`);
+          } else if (geminiKey) {
+            // Last resort, try with Gemini
+            console.log(`Using Gemini API for product enhancement`);
+            enhancedProducts = await enhanceProductData(productsToEnhance, marketplace);
+            console.log(`Product enhancement completed successfully with Gemini`);
+          } else {
+            throw new Error("No API keys available for product enhancement with optimized prompts");
+          }
         } catch (optimizedError: any) {
           console.error("Optimized prompts error:", optimizedError);
           errors.push(`Optimized prompts error: ${optimizedError.message || 'Unknown error'}`);
           
-          // Fall back to standard OpenRouter
-          console.log("Falling back to standard OpenRouter API...");
+          // Fall back to any available API, starting with OpenRouter
+          console.log("Falling back to standard API providers...");
           try {
             enhancedProducts = await enhanceProductDataWithOpenRouter(productsToEnhance, marketplace, modelPreference);
             console.log(`Product enhancement completed successfully with standard OpenRouter fallback`);
