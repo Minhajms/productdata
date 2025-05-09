@@ -53,8 +53,10 @@ export async function analyzeProductData(products: any[]): Promise<{
   try {
     console.log(`Analyzing ${products.length} products with intelligent analyzer`);
     
+    // Take a sample for analysis (to avoid overwhelming the API), but process all products
     const sampleSize = Math.min(3, products.length);
     const productSamples = products.slice(0, sampleSize);
+    // Note: We'll still map all products after analysis, not just the samples
     
     // Create system prompt for analysis
     const systemPrompt = `

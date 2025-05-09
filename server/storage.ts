@@ -1,6 +1,6 @@
 import { db } from "@db";
 import { products, exportHistory, Product as DbProduct, ExportHistoryItem } from "@shared/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql, desc } from "drizzle-orm";
 
 class Storage {
   async saveProducts(productList: any[]): Promise<DbProduct[]> {
@@ -135,7 +135,6 @@ class Storage {
   }
 }
 
-// Import the SQL functions for onConflictDoUpdate
-import { sql, desc } from "drizzle-orm";
+// SQL functions imported at the top of the file
 
 export const storage = new Storage();
