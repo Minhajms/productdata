@@ -18,11 +18,14 @@ import {
   FileText,
   Settings,
   Loader2,
+  Play,
+  Pause,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TransformationAnimation } from "@/components/ui/transformation-animation";
 
 interface EnhancementProps {
   products: any[];
@@ -44,6 +47,9 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
   });
   const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
   const [editMode, setEditMode] = useState(false);
+  const [showTransformationAnimation, setShowTransformationAnimation] = useState(false);
+  const [animationPlaying, setAnimationPlaying] = useState(false);
+  const [animationFieldToShow, setAnimationFieldToShow] = useState<string>("all");
   
   // Initialize enhanced products with original data
   useEffect(() => {
@@ -80,29 +86,44 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
       category: currentProduct.category || "",
     });
     
-    // Simulate enhancement progress
-    const interval = setInterval(() => {
-      setEnhancementProgress(prev => {
-        const newProgress = prev + Math.floor(Math.random() * 10) + 5;
-        
-        if (newProgress >= 100) {
-          clearInterval(interval);
+    // Check if user wants to see the animation
+    if (showTransformationAnimation) {
+      setAnimationPlaying(true);
+      
+      // Apply enhancement after animation would complete
+      setTimeout(() => {
+        applyEnhancement(currentProductIndex);
+        setSelectedTab("enhanced");
+        setEditMode(false);
+        setAnimationPlaying(false);
+      }, 6000); // Wait for animation to complete
+      
+      return () => {};
+    } else {
+      // Traditional progress bar approach
+      const interval = setInterval(() => {
+        setEnhancementProgress(prev => {
+          const newProgress = prev + Math.floor(Math.random() * 10) + 5;
           
-          // Apply enhancement after progress complete
-          setTimeout(() => {
-            applyEnhancement(currentProductIndex);
-            setSelectedTab("enhanced");
-            setEditMode(false);
-          }, 500);
+          if (newProgress >= 100) {
+            clearInterval(interval);
+            
+            // Apply enhancement after progress complete
+            setTimeout(() => {
+              applyEnhancement(currentProductIndex);
+              setSelectedTab("enhanced");
+              setEditMode(false);
+            }, 500);
+            
+            return 100;
+          }
           
-          return 100;
-        }
-        
-        return newProgress;
-      });
-    }, 300);
-    
-    return () => clearInterval(interval);
+          return newProgress;
+        });
+      }, 300);
+      
+      return () => clearInterval(interval);
+    }
   };
   
   // Simulate enhancing all products
@@ -349,7 +370,73 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
   };
 
   // Loading state when enhancing
-  if (enhancementProgress > 0 && enhancementProgress < 100) {
+  if ((enhancementProgress > 0 && enhancementProgress < 100) || animationPlaying) {
+    // If user chose to show the transformation animation and the animation is playing
+    if (showTransformationAnimation && animationPlaying) {
+      const originalProductData = {
+        title: originalValues.title || "No title provided",
+        description: originalValues.description || "No description provided",
+        bulletPoints: Array.isArray(originalValues.bullet_points) ? originalValues.bullet_points : [],
+      };
+      
+      const enhancedProductData = generateEnhancedData(currentProduct);
+      
+      return (
+        <div className="max-w-6xl mx-auto py-8">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-6">
+              <Sparkles className="h-8 w-8 text-blue-600" />
+            </div>
+            
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">
+              {enhancingAll ? 'Enhancing All Products' : 'AI Transformation Process'}
+            </h2>
+            
+            <p className="text-gray-600 mb-2 max-w-xl mx-auto">
+              Watch in real-time as our AI transforms your basic product data into compelling, conversion-optimized content.
+            </p>
+          </div>
+          
+          <TransformationAnimation
+            originalData={originalProductData}
+            enhancedData={enhancedProductData}
+            isPlaying={true}
+            speed="medium"
+            fieldToAnimate={animationFieldToShow}
+            highlightChanges={true}
+          />
+          
+          <div className="mt-8 flex justify-center">
+            <div className="max-w-md w-full">
+              <div className="flex flex-col gap-3 text-left text-sm text-gray-600">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 rounded-full mr-3 flex items-center justify-center bg-green-100">
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  </div>
+                  <span>Optimizing for {enhancementOptions.marketplace} marketplace</span>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="w-5 h-5 rounded-full mr-3 flex items-center justify-center bg-green-100">
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  </div>
+                  <span>Using {enhancementOptions.quality} content style</span>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="w-5 h-5 rounded-full mr-3 flex items-center justify-center bg-green-100">
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  </div>
+                  <span>Focusing on {enhancementOptions.optimizeFor} optimization</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Traditional progress bar UI
     return (
       <div className="max-w-5xl mx-auto flex flex-col items-center justify-center py-12">
         <div className="w-full max-w-md text-center">
@@ -436,6 +523,26 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
                 <span>Finalizing enhanced listing</span>
               </div>
             </div>
+            
+            {/* Show option to view with animation next time */}
+            {!showTransformationAnimation && enhancementProgress > 40 && enhancementProgress < 80 && (
+              <div className="mt-6 pt-4 border-t border-gray-200 text-left">
+                <div className="flex items-center">
+                  <Switch 
+                    id="show-animation-next"
+                    checked={showTransformationAnimation}
+                    onCheckedChange={setShowTransformationAnimation}
+                    className="mr-3"
+                  />
+                  <Label htmlFor="show-animation-next" className="text-sm cursor-pointer">
+                    Show transformation animation next time
+                  </Label>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 ml-10">
+                  Visualize how AI enhances your product data
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -544,6 +651,42 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
                       <SelectItem value="information">Detailed Information</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="show-animation">Show Transformation Animation</Label>
+                      <p className="text-xs text-gray-500">
+                        Visualize how AI enhances your product
+                      </p>
+                    </div>
+                    <Switch 
+                      id="show-animation"
+                      checked={showTransformationAnimation}
+                      onCheckedChange={setShowTransformationAnimation}
+                    />
+                  </div>
+                  
+                  {showTransformationAnimation && (
+                    <div className="mt-2 space-y-2">
+                      <Label htmlFor="animationField" className="text-sm">Field to Animate</Label>
+                      <Select 
+                        value={animationFieldToShow}
+                        onValueChange={setAnimationFieldToShow}
+                      >
+                        <SelectTrigger id="animationField">
+                          <SelectValue placeholder="Select field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Show All Fields</SelectItem>
+                          <SelectItem value="title">Title Only</SelectItem>
+                          <SelectItem value="description">Description Only</SelectItem>
+                          <SelectItem value="bulletPoints">Bullet Points Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
               
