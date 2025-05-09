@@ -227,6 +227,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { products, productIds } = req.body;
       let productsToAnalyze = [];
       
+      console.log("Analyze endpoint called with:", {
+        hasProducts: products && Array.isArray(products), 
+        productsLength: products?.length || 0,
+        hasProductIds: productIds && Array.isArray(productIds),
+        productIdsLength: productIds?.length || 0
+      });
+      
       // If productIds are provided, fetch those products from the database
       if (productIds && Array.isArray(productIds) && productIds.length > 0) {
         console.log("Fetching products by IDs for analysis:", productIds);
@@ -236,10 +243,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Otherwise, use directly provided products array
       else if (products && Array.isArray(products) && products.length > 0) {
         productsToAnalyze = products;
+        console.log(`Using ${productsToAnalyze.length} directly provided products for analysis`);
       }
       
       if (productsToAnalyze.length === 0) {
-        return res.status(400).json({ message: "No valid products provided" });
+        console.error("No products to analyze found. Request body:", req.body);
+        
+        // Return empty analysis results rather than error to avoid blocking workflow
+        return res.json({
+          message: "No products to analyze, returning empty results",
+          productTypes: [],
+          enhancementSuggestions: ["Make sure products are uploaded successfully before analysis"],
+          commonMissingFields: []
+        });
       }
       
       // Analyze product types and suggest enhancements

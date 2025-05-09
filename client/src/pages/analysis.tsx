@@ -265,11 +265,22 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
     // Extract product IDs for more efficient API call
     const productIds = products.map(product => product.product_id);
     
+    addLog(`Preparing to enhance ${productIds.length} products with IDs: ${productIds.slice(0, 3).join(', ')}${productIds.length > 3 ? '...' : ''}`, "info");
+    
     // Call the backend to enhance products with just the IDs
-    enhanceMutation.mutate({ 
-      productIds,
-      marketplace: marketplace.name
-    });
+    // If we have no product IDs, send the full product objects as fallback
+    if (productIds.length === 0) {
+      addLog("Warning: No product IDs found, using full product objects", "warning");
+      enhanceMutation.mutate({ 
+        products,
+        marketplace: marketplace.name
+      });
+    } else {
+      enhanceMutation.mutate({ 
+        productIds,
+        marketplace: marketplace.name
+      });
+    }
     
     // Simulate progress for better UX
     let currentProgress = progress;
