@@ -118,13 +118,15 @@ async function callOpenRouterAPI(
         messages: messages,
         max_tokens: 1024,
         temperature: 0.7,
+        response_format: { type: "json_object" } // Add structured outputs to get valid JSON
       },
       {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${openrouterKey}`,
-          'HTTP-Referer': 'https://product-enhancer.replit.app', // Replace with your site
-          'X-Title': 'Product Data Enhancer'
+          'HTTP-Referer': 'https://product-enhancer.replit.app', 
+          'X-Title': 'Product Data Enhancer',
+          'Cache-Control': 'max-age=300' // Enable caching with 5-minute TTL
         }
       }
     );
@@ -198,9 +200,46 @@ Provide your response as a JSON object with these fields:
   const messages = [
     {
       role: "system",
-      content: "You are a product research specialist with expertise in e-commerce optimization and marketplace listings. Your task is to analyze product data and identify what the product is, even with limited information."
+      content: [
+        {
+          type: "text",
+          text: "You are a product research specialist with expertise in e-commerce optimization and marketplace listings. Your task is to analyze product data and identify what the product is, even with limited information."
+        }
+      ]
     },
-    { role: "user", content: userMessage }
+    { 
+      role: "user", 
+      content: [
+        {
+          type: "text",
+          text: "I need to understand this product better to create marketplace listings:"
+        },
+        {
+          type: "text",
+          text: JSON.stringify(productData, null, 2),
+          cache_control: {
+            type: "ephemeral"
+          }
+        },
+        {
+          type: "text",
+          text: `Based on the available information, please research this product and provide:
+1. What type of product is this?
+2. What are its key features and benefits?
+3. What is its primary use case?
+4. What category would it belong to?
+5. Who would be the target audience?
+
+Provide your response as a JSON object with these fields:
+- productType: string
+- keyFeatures: string[]
+- primaryUse: string
+- suggestedCategory: string
+- targetAudience: string
+- additionalInfo: string`
+        }
+      ] 
+    }
   ];
   
   const responseText = await callOpenRouterAPI(messages, modelIdentifier);
@@ -295,14 +334,36 @@ async function generateDescriptionWithOpenRouter(
 - Maintains a professional, engaging tone
 - Stays under ${maxLength} characters`;
 
-  const userPrompt = `Create an optimized product description for this product:
-${JSON.stringify(product, null, 2)}
-
-Respond ONLY with the description text. Do NOT include any explanations.`;
-
   const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt }
+    { 
+      role: "system", 
+      content: [
+        {
+          type: "text",
+          text: systemPrompt
+        }
+      ]
+    },
+    { 
+      role: "user", 
+      content: [
+        {
+          type: "text",
+          text: "Create an optimized product description for this product:"
+        },
+        {
+          type: "text",
+          text: JSON.stringify(product, null, 2),
+          cache_control: {
+            type: "ephemeral"
+          }
+        },
+        {
+          type: "text",
+          text: "Respond ONLY with the description text. Do NOT include any explanations."
+        }
+      ]
+    }
   ];
   
   const description = await callOpenRouterAPI(messages, modelIdentifier);
@@ -336,17 +397,39 @@ async function generateBulletPointsWithOpenRouter(
 - Are ordered by importance (most important first)
 - Do not use bullet point markers (•, *, etc.) as they will be added by the system`;
 
-  const userPrompt = `Create ${count} optimized bullet points for this product:
-${JSON.stringify(product, null, 2)}
-
-Respond with EXACTLY ${count} bullet points in a JSON array format like this:
+  const messages = [
+    { 
+      role: "system", 
+      content: [
+        {
+          type: "text",
+          text: systemPrompt
+        }
+      ]
+    },
+    { 
+      role: "user", 
+      content: [
+        {
+          type: "text",
+          text: `Create ${count} optimized bullet points for this product:`
+        },
+        {
+          type: "text",
+          text: JSON.stringify(product, null, 2),
+          cache_control: {
+            type: "ephemeral"
+          }
+        },
+        {
+          type: "text",
+          text: `Respond with EXACTLY ${count} bullet points in a JSON array format like this:
 ["Bullet point 1", "Bullet point 2", "Bullet point 3", ...]
 
-Do NOT include any explanations, just the JSON array.`;
-
-  const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt }
+Do NOT include any explanations, just the JSON array.`
+        }
+      ] 
+    }
   ];
   
   const response = await callOpenRouterAPI(messages, modelIdentifier);
