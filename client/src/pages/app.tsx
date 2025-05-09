@@ -1,160 +1,227 @@
 import { useState } from "react";
-import Header from "@/components/layout/header";
-import Footer from "@/components/layout/footer";
-import Upload from "@/pages/upload";
-import MarketplaceSelection from "@/pages/marketplace-selection";
-import Analysis from "@/pages/analysis";
-import Review from "@/pages/review";
-import Export from "@/pages/export";
-import ProcessStepper, { Step } from "@/components/ui/process-stepper";
-import { Marketplace, Product, ProcessStep } from "@/types";
-import { useStore } from "@/store/enhancer-store";
+import { useLocation } from "wouter";
+import { Upload } from "./upload";
+import { Analysis } from "./analysis";
+import { Enhancement } from "./enhancement";
+import { Export } from "./export";
+import { useToast } from "@/hooks/use-toast";
+import { Steps, Step } from "@/components/ui/steps";
 
-export function App() {
-  const [currentStep, setCurrentStep] = useState<ProcessStep>("upload");
+export function ApplicationPage() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [products, setProducts] = useState<any[]>([]);
   
-  const { 
-    uploadedFile, 
-    setUploadedFile,
-    selectedMarketplace,
-    setSelectedMarketplace,
-    productData,
-    setProductData,
-    enhancedData,
-    setEnhancedData
-  } = useStore();
-  
-  const steps: Step[] = [
-    { 
-      id: 1, 
-      name: "Upload CSV", 
-      status: currentStep === "upload" ? "active" : 
-        (uploadedFile ? "completed" : "pending") 
-    },
-    { 
-      id: 2, 
-      name: "Select Marketplace", 
-      status: currentStep === "marketplace" ? "active" : 
-        (selectedMarketplace ? "completed" : 
-          (uploadedFile ? "pending" : "pending")) 
-    },
-    { 
-      id: 3, 
-      name: "Analyze & Complete", 
-      status: currentStep === "analyze" ? "active" : 
-        (enhancedData.length > 0 ? "completed" : "pending") 
-    },
-    { 
-      id: 4, 
-      name: "Review", 
-      status: currentStep === "review" ? "active" : 
-        (currentStep === "export" ? "completed" : "pending") 
-    },
-    { 
-      id: 5, 
-      name: "Export", 
-      status: currentStep === "export" ? "active" : "pending" 
-    }
+  // Mock steps for the workflow
+  const steps = [
+    { title: "Upload", description: "Upload product data" },
+    { title: "Analysis", description: "Analyze product information" },
+    { title: "Enhancement", description: "Enhance with AI" },
+    { title: "Export", description: "Export enhanced data" },
   ];
   
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file);
-    setCurrentStep("marketplace");
+  // Handle file upload from Upload component
+  const handleFileUpload = async (file: File) => {
+    try {
+      // Create form data for file upload
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      // Upload file to server
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to upload file");
+      }
+      
+      const data = await response.json();
+      
+      // Set products from response
+      setProducts(data.products);
+      
+      // Move to analysis step
+      setCurrentStep(1);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Error uploading file",
+        description: "Please try again or contact support",
+        variant: "destructive",
+      });
+    }
   };
   
-  const handleMarketplaceSelect = (marketplace: Marketplace) => {
-    setSelectedMarketplace(marketplace);
-    setCurrentStep("analyze");
+  // Mock file upload for development purposes
+  const handleMockFileUpload = (file: File) => {
+    // Mock products data
+    const mockProducts = [
+      {
+        product_id: "P001",
+        title: "Wireless Headphones",
+        description: "Bluetooth headphones with good sound quality",
+        price: "59.99",
+        category: "Electronics",
+        status: "pending"
+      },
+      {
+        product_id: "P002",
+        title: "Coffee Maker",
+        description: "12-cup programmable coffee maker",
+        price: "49.99",
+        category: "Kitchen",
+        status: "pending"
+      },
+      {
+        product_id: "P003",
+        title: "Desk Lamp",
+        description: "LED desk lamp with adjustable brightness",
+        price: "29.99",
+        category: "Home Office",
+        status: "pending"
+      }
+    ];
+    
+    // Set mock products
+    setProducts(mockProducts);
+    
+    // Move to analysis step
+    setCurrentStep(1);
+    
+    // Show success toast
+    toast({
+      title: "File uploaded successfully",
+      description: `${file.name} processed with ${mockProducts.length} products found`,
+    });
   };
   
-  const handleAnalysisComplete = (enhancedProducts: Product[]) => {
-    setEnhancedData(enhancedProducts);
-    setCurrentStep("review");
+  // Handle completion of analysis
+  const handleAnalysisComplete = () => {
+    setCurrentStep(2);
   };
   
-  const handleReviewComplete = () => {
-    setCurrentStep("export");
+  // Handle completion of enhancement
+  const handleEnhancementComplete = (enhancedProducts: any[]) => {
+    setProducts(enhancedProducts);
+    setCurrentStep(3);
   };
   
-  const handleBack = () => {
+  // Handle back from enhancement to analysis
+  const handleEnhancementBack = () => {
+    setCurrentStep(1);
+  };
+  
+  // Handle back from export to enhancement
+  const handleExportBack = () => {
+    setCurrentStep(2);
+  };
+  
+  // Handle starting a new upload
+  const handleNewUpload = () => {
+    setProducts([]);
+    setCurrentStep(0);
+  };
+  
+  // Render current step content
+  const renderStepContent = () => {
     switch (currentStep) {
-      case "marketplace":
-        setCurrentStep("upload");
-        break;
-      case "analyze":
-        setCurrentStep("marketplace");
-        break;
-      case "review":
-        setCurrentStep("analyze");
-        break;
-      case "export":
-        setCurrentStep("review");
-        break;
+      case 0:
+        return <Upload onFileUpload={handleMockFileUpload} />;
+      case 1:
+        return <Analysis products={products} onAnalysisComplete={handleAnalysisComplete} />;
+      case 2:
+        return (
+          <Enhancement 
+            products={products} 
+            onEnhancementComplete={handleEnhancementComplete} 
+            onBack={handleEnhancementBack}
+          />
+        );
+      case 3:
+        return (
+          <Export 
+            products={products} 
+            onBack={handleExportBack} 
+            onNew={handleNewUpload}
+          />
+        );
       default:
-        break;
+        return <Upload onFileUpload={handleMockFileUpload} />;
     }
   };
   
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      
-      <main className="flex-grow py-8">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Header with steps */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ProcessStepper steps={steps} />
-          
-          <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-            {currentStep === "upload" && (
-              <Upload onFileUpload={handleFileUpload} />
-            )}
-            
-            {currentStep === "marketplace" && (
-              <MarketplaceSelection 
-                onMarketplaceSelect={handleMarketplaceSelect}
-                onBack={handleBack}
-              />
-            )}
-            
-            {currentStep === "analyze" && (
-              <Analysis 
-                file={uploadedFile}
-                marketplace={selectedMarketplace}
-                onComplete={handleAnalysisComplete}
-                onBack={handleBack}
-                productData={productData}
-                setProductData={setProductData}
-              />
-            )}
-            
-            {currentStep === "review" && (
-              <Review 
-                enhancedData={enhancedData}
-                marketplace={selectedMarketplace?.name || ""}
-                onContinue={handleReviewComplete}
-                onBack={handleBack}
-                onUpdateProduct={(updatedProduct) => {
-                  const updated = enhancedData.map(p => 
-                    p.product_id === updatedProduct.product_id ? updatedProduct : p
-                  );
-                  setEnhancedData(updated);
-                }}
-              />
-            )}
-            
-            {currentStep === "export" && (
-              <Export 
-                enhancedData={enhancedData}
-                marketplace={selectedMarketplace?.name || ""}
-                onBack={handleBack}
-              />
-            )}
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <span className="text-2xl font-bold text-blue-600">ProductEnhancer</span>
+            </div>
+            <div className="hidden md:block">
+              <Steps current={currentStep} className="w-full max-w-xl">
+                {steps.map((step, index) => (
+                  <Step 
+                    key={index} 
+                    title={step.title}
+                    status={
+                      currentStep > index 
+                        ? "complete" 
+                        : currentStep === index 
+                          ? "current" 
+                          : "incomplete"
+                    }
+                  />
+                ))}
+              </Steps>
+            </div>
+            <div></div> {/* Placeholder for right side */}
           </div>
         </div>
+      </header>
+      
+      {/* Mobile steps indicator - visible on small screens */}
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-gray-700">
+            Step {currentStep + 1} of {steps.length}: {steps[currentStep].title}
+          </span>
+          <span className="text-xs text-gray-500">
+            {steps[currentStep].description}
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+          <div 
+            className="bg-blue-600 h-1.5 rounded-full" 
+            style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+          ></div>
+        </div>
+      </div>
+      
+      {/* Main content */}
+      <main className="flex-1 py-6">
+        {renderStepContent()}
       </main>
       
-      <Footer />
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-500">
+              &copy; {new Date().getFullYear()} ProductEnhancer. All rights reserved.
+            </div>
+            <div className="text-sm text-gray-500">
+              Powered by AI
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
-export default App;
+export default ApplicationPage;

@@ -1,354 +1,580 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { 
+  Download,
+  FileJson,
+  FileSpreadsheet,
+  ArrowLeft,
+  CheckCircle2,
+  Home,
+  Copy,
+  BarChart3,
+  Package2,
+  FileText,
+  History,
+  MoreHorizontal
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Product } from "@/types";
-import { Download, Info, Eye } from "lucide-react";
-import ProductPreviewModal from "@/components/product-preview-modal";
-import { generateFileName } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 
 interface ExportProps {
-  enhancedData: Product[];
-  marketplace: string;
+  products: any[];
   onBack: () => void;
+  onNew: () => void;
 }
 
-export function Export({ enhancedData, marketplace, onBack }: ExportProps) {
-  const [exportFormat, setExportFormat] = useState("standard_csv");
-  const [productFilter, setProductFilter] = useState("all");
-  const [includeHeaders, setIncludeHeaders] = useState(true);
-  const [encodeUtf8, setEncodeUtf8] = useState(true);
-  const [saveTemplate, setSaveTemplate] = useState(false);
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-  const { toast } = useToast();
-  
-  // Calculate stats
-  const totalProducts = enhancedData.length;
-  const completeProducts = enhancedData.filter(p => 
-    p.title && p.description && p.brand && p.category
-  ).length;
-  const warningProducts = enhancedData.filter(p => 
-    (p.title && p.description) && (!p.brand || !p.category)
-  ).length;
-  const errorProducts = totalProducts - completeProducts - warningProducts;
-  
-  // Estimate file size based on the products data
-  const estimateFileSize = () => {
-    let totalSize = 0;
-    
-    // Headers size
-    if (includeHeaders) {
-      const headerFields = [
-        "product_id", "title", "description", "price", "brand", "category", 
-        "bullet_points", "images", "asin"
-      ];
-      totalSize += headerFields.join(",").length;
-    }
-    
-    // Product data size (rough estimation)
-    enhancedData.forEach(product => {
-      let productSize = 0;
-      productSize += (product.product_id || "").length;
-      productSize += (product.title || "").length;
-      productSize += (product.description || "").length;
-      productSize += (product.price?.toString() || "").length;
-      productSize += (product.brand || "").length;
-      productSize += (product.category || "").length;
-      productSize += (product.bullet_points?.join(";") || "").length;
-      productSize += (product.images?.join(";") || "").length;
-      productSize += (product.asin || "").length;
-      
-      // Add commas and newline
-      productSize += 10; // approximately for separators
-      
-      totalSize += productSize;
-    });
-    
-    // Convert to KB with 1 decimal point
-    return (totalSize / 1024).toFixed(1) + " KB";
-  };
-  
-  // This is the filter logic that would be applied during export
-  const getFilteredProducts = () => {
-    switch (productFilter) {
-      case "complete_only":
-        return enhancedData.filter(p => 
-          p.title && p.description && p.brand && p.category
-        );
-      case "selected":
-        // In a real implementation, this would use the selected products state
-        return [];
-      default:
-        return enhancedData;
-    }
-  };
-  
-  const exportMutation = useMutation({
-    mutationFn: async (data: {
-      products: Product[];
-      format: string;
-      includeHeaders: boolean;
-      encodeUtf8: boolean;
-      marketplace: string;
-    }) => {
-      const res = await apiRequest("POST", "/api/export", data);
-      return res.blob();
-    },
-    onSuccess: (blob) => {
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      
-      // Generate filename
-      const prefix = marketplace.toLowerCase().replace(/\s+/g, '_');
-      a.download = generateFileName(prefix, "csv");
-      
-      // Trigger download
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Export successful",
-        description: `Your ${marketplace} product data has been exported`,
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Export failed",
-        description: "Could not export product data. Please try again.",
-        variant: "destructive",
-      });
-    }
+export function Export({ products, onBack, onNew }: ExportProps) {
+  const [, setLocation] = useLocation();
+  const [exportFormat, setExportFormat] = useState("csv");
+  const [targetMarketplace, setTargetMarketplace] = useState("amazon");
+  const [exportOptions, setExportOptions] = useState({
+    includeHeaders: true,
+    includeUnenhanced: true,
+    encodeUtf8: true,
+    addQuotes: true,
+    formatForMarketplace: true,
   });
+  const [selectedExportFields, setSelectedExportFields] = useState<string[]>([
+    "product_id", "title", "description", "bullet_points", "brand", "category", "price", "images"
+  ]);
+  const [exportHistory, setExportHistory] = useState([
+    { 
+      id: 1, 
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), 
+      format: "CSV", 
+      marketplace: "Amazon", 
+      products: 15,
+      name: "Amazon Electronics Batch"
+    },
+    { 
+      id: 2, 
+      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), 
+      format: "CSV", 
+      marketplace: "eBay", 
+      products: 8,
+      name: "eBay Home Goods"
+    }
+  ]);
+  
+  const marketplaceOptions = [
+    { id: "amazon", name: "Amazon", icon: <Package2 className="h-4 w-4 mr-2" /> },
+    { id: "ebay", name: "eBay", icon: <BarChart3 className="h-4 w-4 mr-2" /> },
+    { id: "walmart", name: "Walmart", icon: <Package2 className="h-4 w-4 mr-2" /> },
+    { id: "etsy", name: "Etsy", icon: <Package2 className="h-4 w-4 mr-2" /> },
+    { id: "shopify", name: "Shopify", icon: <Package2 className="h-4 w-4 mr-2" /> },
+    { id: "generic", name: "Generic CSV", icon: <FileText className="h-4 w-4 mr-2" /> },
+  ];
+  
+  const formatOptions = [
+    { id: "csv", name: "CSV", icon: <FileSpreadsheet className="h-4 w-4 mr-2" />, description: "Compatible with Excel and spreadsheet software" },
+    { id: "json", name: "JSON", icon: <FileJson className="h-4 w-4 mr-2" />, description: "Best for developer-friendly data" },
+    { id: "tsv", name: "TSV", icon: <FileText className="h-4 w-4 mr-2" />, description: "Tab-separated values for specific systems" },
+  ];
+  
+  const fieldOptions = [
+    { id: "product_id", label: "Product ID", required: true },
+    { id: "title", label: "Title", required: true },
+    { id: "description", label: "Description", required: false },
+    { id: "bullet_points", label: "Bullet Points", required: false },
+    { id: "brand", label: "Brand", required: false },
+    { id: "category", label: "Category", required: false },
+    { id: "price", label: "Price", required: false },
+    { id: "images", label: "Images", required: false },
+    { id: "asin", label: "ASIN", required: false },
+    { id: "sku", label: "SKU", required: false },
+    { id: "upc", label: "UPC", required: false },
+    { id: "keywords", label: "Keywords", required: false },
+  ];
+  
+  const toggleField = (field: string) => {
+    setSelectedExportFields(prev => 
+      prev.includes(field) 
+        ? prev.filter(f => f !== field) 
+        : [...prev, field]
+    );
+  };
   
   const handleExport = () => {
-    const products = getFilteredProducts();
+    // Simulate export
+    toast({
+      title: "Export completed",
+      description: `${products.length} products exported as ${exportFormat.toUpperCase()} for ${getMarketplaceName(targetMarketplace)}`,
+    });
     
-    exportMutation.mutate({
-      products,
-      format: exportFormat,
-      includeHeaders,
-      encodeUtf8,
-      marketplace
+    // Update export history
+    const newExportRecord = {
+      id: exportHistory.length + 1,
+      date: new Date().toISOString(),
+      format: exportFormat.toUpperCase(),
+      marketplace: getMarketplaceName(targetMarketplace),
+      products: products.length,
+      name: `${getMarketplaceName(targetMarketplace)} Export ${new Date().toLocaleDateString()}`
+    };
+    
+    setExportHistory([newExportRecord, ...exportHistory]);
+  };
+  
+  const getMarketplaceName = (id: string) => {
+    return marketplaceOptions.find(m => m.id === id)?.name || id;
+  };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).format(date);
+  };
+  
+  const copyToClipboard = () => {
+    toast({
+      title: "Link copied to clipboard",
+      description: "Share this link to provide access to your export",
     });
   };
   
-  const handlePreview = () => {
-    // Show the preview modal with the first product
-    if (enhancedData.length > 0) {
-      setCurrentProduct(enhancedData[0]);
-      setPreviewModalOpen(true);
+  const downloadSelectedExport = (id: number) => {
+    toast({
+      title: "Download started",
+      description: "Your previously exported file is being downloaded",
+    });
+  };
+  
+  const renderExportPreview = () => {
+    const enhancedProducts = products.filter(p => p.status === "enhanced");
+    const previewProducts = enhancedProducts.slice(0, 3);
+    
+    if (exportFormat === "csv") {
+      return (
+        <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm font-mono overflow-x-auto max-h-[300px] text-gray-700">
+          {/* CSV header row */}
+          <div className="mb-1">
+            {selectedExportFields.join(",")}
+          </div>
+          
+          {/* Sample data rows */}
+          {previewProducts.map((product, index) => (
+            <div key={index} className="mb-1">
+              {selectedExportFields.map(field => {
+                // Handle special fields that might be arrays or objects
+                if (field === "bullet_points" && Array.isArray(product[field])) {
+                  return `"${product[field].join("; ")}"`;
+                }
+                if (field === "images" && Array.isArray(product[field])) {
+                  return `"${product[field].join("; ")}"`;
+                }
+                return `"${product[field] || ""}"`;
+              }).join(",")}
+            </div>
+          ))}
+          
+          {enhancedProducts.length > 3 && (
+            <div className="text-gray-500 pt-1">
+              ... and {enhancedProducts.length - 3} more rows
+            </div>
+          )}
+        </div>
+      );
     }
+    
+    if (exportFormat === "json") {
+      const jsonPreview = previewProducts.map(product => {
+        const filteredProduct: Record<string, any> = {};
+        selectedExportFields.forEach(field => {
+          filteredProduct[field] = product[field];
+        });
+        return filteredProduct;
+      });
+      
+      return (
+        <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm font-mono overflow-x-auto max-h-[300px] text-gray-700">
+          {JSON.stringify(jsonPreview, null, 2)}
+          {enhancedProducts.length > 3 && (
+            <div className="text-gray-500 pt-1">
+              ... and {enhancedProducts.length - 3} more items
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // TSV format
+    return (
+      <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm font-mono overflow-x-auto max-h-[300px] text-gray-700">
+        {/* TSV header row */}
+        <div className="mb-1">
+          {selectedExportFields.join("\t")}
+        </div>
+        
+        {/* Sample data rows */}
+        {previewProducts.map((product, index) => (
+          <div key={index} className="mb-1">
+            {selectedExportFields.map(field => {
+              // Handle special fields that might be arrays or objects
+              if (field === "bullet_points" && Array.isArray(product[field])) {
+                return `"${product[field].join("; ")}"`;
+              }
+              if (field === "images" && Array.isArray(product[field])) {
+                return `"${product[field].join("; ")}"`;
+              }
+              return `"${product[field] || ""}"`;
+            }).join("\t")}
+          </div>
+        ))}
+        
+        {enhancedProducts.length > 3 && (
+          <div className="text-gray-500 pt-1">
+            ... and {enhancedProducts.length - 3} more rows
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="p-6 sm:p-8">
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">Export Enhanced Data</h2>
-      <p className="text-gray-600 mb-6">
-        Your product data has been enhanced and is ready to export to {marketplace} format.
-      </p>
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Export Enhanced Products</h2>
+          <p className="text-gray-600">
+            Export your enhanced products in your preferred format
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <Button 
+            variant="outline" 
+            onClick={onNew}
+          >
+            <Home className="mr-2 h-4 w-4" />
+            New Upload
+          </Button>
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={handleExport}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export Products
+          </Button>
+        </div>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardContent className="p-5">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Export Options</h3>
-            
-            <div className="mb-4">
-              <Label className="block text-sm font-medium text-gray-700 mb-2">Export Format</Label>
-              <Select
-                value={exportFormat}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Export options column */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Export Format</CardTitle>
+              <CardDescription>Choose your preferred file format</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup 
+                value={exportFormat} 
                 onValueChange={setExportFormat}
+                className="space-y-3"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select format" />
+                {formatOptions.map(format => (
+                  <div 
+                    key={format.id}
+                    className={`flex items-center space-x-2 rounded-md border p-3 ${exportFormat === format.id ? 'border-blue-200 bg-blue-50' : 'border-gray-200'}`}
+                  >
+                    <RadioGroupItem value={format.id} id={`format-${format.id}`} />
+                    <Label 
+                      htmlFor={`format-${format.id}`}
+                      className="flex-1 cursor-pointer flex items-center"
+                    >
+                      {format.icon}
+                      <div>
+                        <div className="font-medium">{format.name}</div>
+                        <div className="text-xs text-gray-500">{format.description}</div>
+                      </div>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Target Marketplace</CardTitle>
+              <CardDescription>Optimize format for specific marketplace</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select 
+                value={targetMarketplace} 
+                onValueChange={setTargetMarketplace}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a marketplace" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard_csv">Standard CSV</SelectItem>
-                  {marketplace === "Amazon" && (
-                    <>
-                      <SelectItem value="amazon_seller">Amazon Seller Central CSV</SelectItem>
-                      <SelectItem value="amazon_vendor">Amazon Vendor Central CSV</SelectItem>
-                      <SelectItem value="amazon_flat">Amazon Flat File</SelectItem>
-                    </>
-                  )}
-                  {marketplace === "eBay" && (
-                    <SelectItem value="ebay_format">eBay Format CSV</SelectItem>
-                  )}
-                  {marketplace === "Shopify" && (
-                    <SelectItem value="shopify_format">Shopify Import CSV</SelectItem>
-                  )}
-                  {marketplace === "Walmart" && (
-                    <SelectItem value="walmart_format">Walmart Marketplace CSV</SelectItem>
-                  )}
-                  {marketplace === "Etsy" && (
-                    <SelectItem value="etsy_format">Etsy Listing CSV</SelectItem>
-                  )}
+                  {marketplaceOptions.map(marketplace => (
+                    <SelectItem key={marketplace.id} value={marketplace.id}>
+                      <div className="flex items-center">
+                        {marketplace.icon}
+                        {marketplace.name}
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div className="mb-4">
-              <Label className="block text-sm font-medium text-gray-700 mb-2">Include Products</Label>
-              <RadioGroup
-                value={productFilter}
-                onValueChange={setProductFilter}
-                className="space-y-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="all-products" />
-                  <Label htmlFor="all-products">All Products ({totalProducts})</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="complete_only" id="complete-only" />
-                  <Label htmlFor="complete-only">Complete Products Only ({completeProducts})</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="selected" id="selected-only" disabled />
-                  <Label htmlFor="selected-only" className="text-gray-500">Selected Products (0)</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            
-            <div className="mb-4">
-              <Label className="block text-sm font-medium text-gray-700 mb-2">Advanced Options</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="include-headers"
-                    checked={includeHeaders}
-                    onCheckedChange={(checked) => setIncludeHeaders(!!checked)}
+              
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="format-marketplace">Format for Marketplace</Label>
+                    <div className="text-xs text-gray-500">
+                      Adjust field names for {getMarketplaceName(targetMarketplace)} format
+                    </div>
+                  </div>
+                  <Switch 
+                    id="format-marketplace"
+                    checked={exportOptions.formatForMarketplace}
+                    onCheckedChange={(checked) => 
+                      setExportOptions({...exportOptions, formatForMarketplace: checked})
+                    }
                   />
-                  <Label htmlFor="include-headers">Include Column Headers</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="encode-utf8"
-                    checked={encodeUtf8}
-                    onCheckedChange={(checked) => setEncodeUtf8(!!checked)}
-                  />
-                  <Label htmlFor="encode-utf8">UTF-8 Encoding</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="save-template"
-                    checked={saveTemplate}
-                    onCheckedChange={(checked) => setSaveTemplate(!!checked)}
-                  />
-                  <Label htmlFor="save-template">Save Export Settings as Template</Label>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-5">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Export Summary</h3>
-            
-            <dl className="space-y-3">
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Total Products</dt>
-                <dd className="text-sm font-semibold text-gray-900">{totalProducts}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Complete Products</dt>
-                <dd className="text-sm font-semibold text-gray-900">{completeProducts}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Products with Warnings</dt>
-                <dd className="text-sm font-semibold text-yellow-600">{warningProducts}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Products with Errors</dt>
-                <dd className="text-sm font-semibold text-red-600">{errorProducts}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Marketplace</dt>
-                <dd className="text-sm font-semibold text-gray-900">{marketplace}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Export Format</dt>
-                <dd className="text-sm font-semibold text-gray-900">
-                  {exportFormat === "standard_csv" ? "Standard CSV" :
-                   exportFormat === "amazon_seller" ? "Amazon Seller Central CSV" :
-                   exportFormat === "amazon_vendor" ? "Amazon Vendor Central CSV" :
-                   exportFormat === "amazon_flat" ? "Amazon Flat File" :
-                   exportFormat === "ebay_format" ? "eBay Format CSV" :
-                   exportFormat === "shopify_format" ? "Shopify Import CSV" :
-                   exportFormat === "walmart_format" ? "Walmart Marketplace CSV" :
-                   exportFormat === "etsy_format" ? "Etsy Listing CSV" :
-                   "Custom Format"
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Export Options</CardTitle>
+              <CardDescription>Customize your export file</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="include-headers">Include Headers</Label>
+                  <div className="text-xs text-gray-500">
+                    Add field names as the first row
+                  </div>
+                </div>
+                <Switch 
+                  id="include-headers"
+                  checked={exportOptions.includeHeaders}
+                  onCheckedChange={(checked) => 
+                    setExportOptions({...exportOptions, includeHeaders: checked})
                   }
-                </dd>
+                />
               </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">File Size (Estimated)</dt>
-                <dd className="text-sm font-semibold text-gray-900">{estimateFileSize()}</dd>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="include-unenhanced">Include Unenhanced</Label>
+                  <div className="text-xs text-gray-500">
+                    Include products without AI enhancement
+                  </div>
+                </div>
+                <Switch 
+                  id="include-unenhanced"
+                  checked={exportOptions.includeUnenhanced}
+                  onCheckedChange={(checked) => 
+                    setExportOptions({...exportOptions, includeUnenhanced: checked})
+                  }
+                />
               </div>
-            </dl>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="encode-utf8">UTF-8 Encoding</Label>
+                  <div className="text-xs text-gray-500">
+                    Add UTF-8 BOM for international characters
+                  </div>
+                </div>
+                <Switch 
+                  id="encode-utf8"
+                  checked={exportOptions.encodeUtf8}
+                  onCheckedChange={(checked) => 
+                    setExportOptions({...exportOptions, encodeUtf8: checked})
+                  }
+                />
+              </div>
+              
+              {exportFormat === "csv" && (
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="add-quotes">Quote Text Fields</Label>
+                    <div className="text-xs text-gray-500">
+                      Add quotes around text fields
+                    </div>
+                  </div>
+                  <Switch 
+                    id="add-quotes"
+                    checked={exportOptions.addQuotes}
+                    onCheckedChange={(checked) => 
+                      setExportOptions({...exportOptions, addQuotes: checked})
+                    }
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Fields and preview column */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Export Fields</CardTitle>
+              <CardDescription>Select the fields to include in your export</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {fieldOptions.map(field => (
+                  <div key={field.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`field-${field.id}`}
+                      checked={selectedExportFields.includes(field.id)}
+                      onCheckedChange={() => toggleField(field.id)}
+                      disabled={field.required}
+                    />
+                    <div>
+                      <Label 
+                        htmlFor={`field-${field.id}`}
+                        className="cursor-pointer"
+                      >
+                        {field.label}
+                      </Label>
+                      {field.required && (
+                        <span className="ml-2 text-xs text-red-500">Required</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <Alert className="mt-6">
+                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <AlertTitle>Export Ready</AlertTitle>
+                <AlertDescription>
+                  {products.filter(p => p.status === "enhanced").length} enhanced products are ready for export to {getMarketplaceName(targetMarketplace)}.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Export Preview</CardTitle>
+              <CardDescription>Preview of your export file (first 3 rows)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {renderExportPreview()}
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center">
+                    <History className="mr-2 h-5 w-5 text-gray-600" />
+                    Export History
+                  </CardTitle>
+                  <CardDescription>Previous exports available for download</CardDescription>
+                </div>
+                <Badge variant="secondary" className="text-gray-600">
+                  {exportHistory.length} Exports
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Marketplace</TableHead>
+                    <TableHead>Format</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {exportHistory.map(item => (
+                    <TableRow key={item.id}>
+                      <TableCell className="text-sm">
+                        {formatDate(item.date)}
+                      </TableCell>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>{item.marketplace}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-gray-100 hover:bg-gray-100">
+                          {item.format}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => copyToClipboard()}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => downloadSelectedExport(item.id)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {exportHistory.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-gray-500">
+                        No export history available yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          
+          <div className="flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={onBack}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Enhancement
+            </Button>
             
-            <Alert className="mt-6 bg-gray-50 border border-gray-200">
-              <Info className="h-4 w-4 text-primary" />
-              <AlertDescription className="text-sm text-gray-700">
-                {marketplace === "Amazon" ? 
-                  "Amazon recommends reviewing all product listings in Seller Central after upload." :
-                 marketplace === "eBay" ?
-                  "eBay requires verification of listings before they go live." :
-                 marketplace === "Shopify" ?
-                  "Shopify allows bulk import of products through the admin interface." :
-                 marketplace === "Walmart" ?
-                  "Walmart Marketplace has a review process for new product listings." :
-                 marketplace === "Etsy" ?
-                  "Etsy requires manual review of listings after upload." :
-                  "Review your product listings before making them public."
-                }
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleExport}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export Products
+            </Button>
+          </div>
+        </div>
       </div>
-      
-      <div className="flex justify-end space-x-4">
-        <Button
-          variant="outline"
-          onClick={onBack}
-        >
-          Back
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handlePreview}
-        >
-          Preview Export
-        </Button>
-        <Button
-          onClick={handleExport}
-          disabled={exportMutation.isPending}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          {exportMutation.isPending ? "Exporting..." : "Export CSV"}
-        </Button>
-      </div>
-      
-      <ProductPreviewModal
-        isOpen={previewModalOpen}
-        onClose={() => setPreviewModalOpen(false)}
-        product={currentProduct}
-        marketplace={marketplace}
-      />
     </div>
   );
 }
