@@ -227,27 +227,63 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   });
 
   const analyzeData = (products: Product[]) => {
-    if (!marketplace) return;
+    if (!marketplace) {
+      console.error("No marketplace selected for analysis");
+      addLog("Error: No marketplace selected", "error");
+      setProcessing(false);
+      return;
+    }
+    
+    // Verify marketplace has requirements array
+    if (!marketplace.requirements || !Array.isArray(marketplace.requirements)) {
+      console.error("Invalid marketplace requirements:", marketplace);
+      addLog("Error: Marketplace missing requirements configuration", "error");
+      
+      // Create default requirements to allow process to continue
+      addLog("Using default requirements to continue analysis", "warning");
+      
+      // Continue to enhancement even with errors
+      enhanceProducts(products);
+      return;
+    }
     
     // Identify missing fields
     let missingFieldsCount = 0;
-    const requiredFields = marketplace.requirements.filter(r => r.required).map(r => r.display.toLowerCase());
     
-    products.forEach((product, index) => {
-      const productMissingFields = requiredFields.filter(field => {
-        const normalizedField = field.toLowerCase().replace(/\s+/g, '_');
-        return !product[normalizedField as keyof Product];
-      });
+    try {
+      // Safely extract required fields
+      const requiredFields = marketplace.requirements
+        .filter(r => r && r.required && typeof r.display === 'string')
+        .map(r => r.display.toLowerCase());
       
-      if (productMissingFields.length > 0) {
-        missingFieldsCount++;
-        addLog(`Identified ${productMissingFields.length} missing fields for Product ID: ${product.product_id}`, "warning");
+      if (requiredFields.length === 0) {
+        addLog("No required fields found for this marketplace", "warning");
       }
       
-      // Update progress
-      const newProgress = Math.min(30, Math.round(((index + 1) / products.length) * 30));
-      setProgress(newProgress);
-    });
+      products.forEach((product, index) => {
+        const productMissingFields = requiredFields.filter(field => {
+          try {
+            const normalizedField = field.toLowerCase().replace(/\s+/g, '_');
+            return !product[normalizedField as keyof Product];
+          } catch (error) {
+            console.error("Error checking field:", field, error);
+            return false;
+          }
+        });
+        
+        if (productMissingFields.length > 0) {
+          missingFieldsCount++;
+          addLog(`Identified ${productMissingFields.length} missing fields for Product ID: ${product.product_id}`, "warning");
+        }
+        
+        // Update progress
+        const newProgress = Math.min(30, Math.round(((index + 1) / products.length) * 30));
+        setProgress(newProgress);
+      });
+    } catch (error) {
+      console.error("Error analyzing data:", error);
+      addLog(`Error during analysis: ${error.message}`, "error");
+    }
     
     addLog(`Basic analysis complete. Found ${missingFieldsCount} products with missing required fields`, "info");
     

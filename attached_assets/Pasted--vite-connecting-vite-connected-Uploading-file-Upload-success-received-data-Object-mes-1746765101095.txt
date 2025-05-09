@@ -1,0 +1,73 @@
+[vite] connecting...
+[vite] connected.
+Uploading file...
+Upload success, received data: 
+Object {message: "File uploaded successfully", products: Array(7000)}
+Setting 7000 products
+Upload error: 
+TypeError {}
+message: "Cannot read properties of undefined (reading 'toLowerCase')"
+stack: "TypeError: Cannot read properties of undefined (reading 'toLowerCase')↵ at https://f5389a54-eae0-4ca1-8099-858d8e98c6e6-00-qzrugny659go.picard.replit.dev/src/pages/analysis.tsx:186:100↵ at Array.map (<anonymous>)↵ at analyzeData (https://f5389a54-eae0-4ca1-8099-858d8e98c6e6-00-qzrugny659go.picard.replit.dev/src/pages/analysis.tsx:186:79)↵ at Object.onSuccess (https://f5389a54-eae0-4ca1-8099-858d8e98c6e6-00-qzrugny659go.picard.replit.dev/src/pages/analysis.tsx:47:9)↵ at _a6.execute (https://f5389a54-eae0-4ca1-8099-858d8e98c6e6-00-qzrugny659go.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=9888d3a3:1238:73)"
+get stack: ƒ ()
+length: 0
+name: ""
+[[Prototype]]: ƒ ()
+apply: ƒ apply()
+arguments: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get arguments: ƒ ()
+set arguments: ƒ ()
+bind: ƒ bind()
+call: ƒ call()
+caller: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get caller: ƒ ()
+set caller: ƒ ()
+constructor: ƒ Function()
+length: 1
+name: ""
+toString: ƒ toString()
+Symbol(Symbol.hasInstance): undefined
+[[Prototype]]: Object
+set stack: ƒ ()
+length: 1
+name: ""
+[[Prototype]]: ƒ ()
+[[Prototype]]: Object
+constructor: ƒ TypeError()
+length: 1
+name: "TypeError"
+prototype: Object
+constructor: ƒ TypeError()
+message: "Cannot read properties of undefined (reading 'toLowerCase')"
+name: "TypeError"
+[[Prototype]]: Object
+constructor: ƒ TypeError()
+message: "Cannot read properties of undefined (reading 'toLowerCase')"
+name: "TypeError"
+toString: ƒ toString()
+length: 0
+name: "toString"
+[[Prototype]]: ƒ ()
+[[Prototype]]: Object
+constructor: ƒ TypeError()
+hasOwnProperty: ƒ hasOwnProperty()
+isPrototypeOf: ƒ isPrototypeOf()
+propertyIsEnumerable: ƒ propertyIsEnumerable()
+toLocaleString: ƒ toLocaleString()
+toString: ƒ toString()
+valueOf: ƒ valueOf()
+__defineGetter__: ƒ __defineGetter__()
+__defineSetter__: ƒ __defineSetter__()
+__lookupGetter__: ƒ __lookupGetter__()
+__lookupSetter__: ƒ __lookupSetter__()
+__proto__: Object
+get __proto__: ƒ get __proto__()
+set __proto__: ƒ set __proto__()
+[[Prototype]]: ƒ Error()
+message: "Cannot read properties of undefined (reading 'toLowerCase')"
+name: "TypeError"
+[[Prototype]]: Object
+constructor: ƒ TypeError()
+message: "Cannot read properties of undefined (reading 'toLowerCase')"
+name: "TypeError"
+toString: ƒ toString()
+[[Prototype]]: Object
