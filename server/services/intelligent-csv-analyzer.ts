@@ -56,6 +56,7 @@ export async function analyzeProductData(products: any[]): Promise<{
     // Take a sample for analysis (to avoid overwhelming the API), but process all products
     const sampleSize = Math.min(3, products.length);
     const productSamples = products.slice(0, sampleSize);
+    console.log(`Using ${sampleSize} sample products for AI analysis, but will process all ${products.length} products for mapping`);
     // Note: We'll still map all products after analysis, not just the samples
     
     // Create system prompt for analysis
@@ -118,8 +119,10 @@ Respond with ONLY a JSON object with the following structure:
     // Extract field mappings
     const fieldMappings = analysisData.fieldMappings || detectFieldMappings(products);
     
-    // Map products based on detected mappings
+    // Map ALL products based on detected mappings, not just the samples
+    console.log(`Mapping ${products.length} products with detected field mappings`);
     const mappedProducts = mapProductFields(products, fieldMappings);
+    console.log(`Successfully mapped ${mappedProducts.length} products with detected field mappings`);
     
     // Remove fieldMappings from analysis result to match interface
     const { fieldMappings: _, ...analysisResult } = analysisData;
@@ -300,7 +303,8 @@ function mapProductFields(products: any[], fieldMappings: FieldMapping[]): Produ
   return products.map(product => {
     // Create a new product object with standardized fields
     const mappedProduct: Partial<Product> = {
-      product_id: generateProductId(),
+      // Preserve existing product_id if present, otherwise generate a new one
+      product_id: product.product_id || generateProductId(),
       status: "pending",
       title: null,
       description: null,
@@ -367,7 +371,10 @@ function mapProductFields(products: any[], fieldMappings: FieldMapping[]): Produ
  * Generate a random product ID
  */
 function generateProductId(): string {
-  return `PROD-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+  // Use timestamp to ensure uniqueness
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `PROD-${timestamp}-${random}`;
 }
 
 /**
@@ -497,8 +504,10 @@ function detectFieldMappings(products: any[]): FieldMapping[] {
  */
 export async function detectProductTypes(products: Product[]): Promise<Record<string, any>> {
   try {
+    // Only use a sample of products for analysis to save API costs
     const sampleSize = Math.min(3, products.length);
     const productSamples = products.slice(0, sampleSize);
+    console.log(`Analyzing ${sampleSize} sample products out of ${products.length} total for product type detection`);
     
     // Create system prompt for product type detection
     const systemPrompt = `
