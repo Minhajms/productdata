@@ -54,10 +54,14 @@ export async function analyzeProductData(products: any[]): Promise<{
     console.log(`Analyzing ${products.length} products with intelligent analyzer`);
     
     // Take a sample for analysis (to avoid overwhelming the API), but process all products
-    const sampleSize = Math.min(3, products.length);
+    const sampleSize = Math.min(5, products.length);
     const productSamples = products.slice(0, sampleSize);
     console.log(`Using ${sampleSize} sample products for AI analysis, but will process all ${products.length} products for mapping`);
-    // Note: We'll still map all products after analysis, not just the samples
+    
+    // Debug log to track all product IDs
+    if (products.length > 0) {
+      console.log(`Debug - Product IDs being processed: ${products.map(p => p.product_id).join(', ').substring(0, 200)}${products.length > 10 ? '...' : ''}`);
+    }
     
     // Create system prompt for analysis
     const systemPrompt = `
@@ -124,6 +128,12 @@ Respond with ONLY a JSON object with the following structure:
     const mappedProducts = mapProductFields(products, fieldMappings);
     console.log(`Successfully mapped ${mappedProducts.length} products with detected field mappings`);
     
+    // Log the first few product IDs from the mapped products to verify all were processed
+    if (mappedProducts.length > 0) {
+      console.log(`Debug - First few mapped product IDs: ${mappedProducts.slice(0, 5).map(p => p.product_id).join(', ')}${mappedProducts.length > 5 ? '...' : ''}`);
+      console.log(`Debug - Total mapped products: ${mappedProducts.length}`);
+    }
+    
     // Remove fieldMappings from analysis result to match interface
     const { fieldMappings: _, ...analysisResult } = analysisData;
     
@@ -137,8 +147,15 @@ Respond with ONLY a JSON object with the following structure:
     
     // Fallback to basic analysis if AI analysis fails
     console.log('Falling back to basic analysis');
+    console.log(`Attempting to map all ${products.length} products with basic field detection`);
     const fieldMappings = detectFieldMappings(products);
     const mappedProducts = mapProductFields(products, fieldMappings);
+    console.log(`Fallback mapping completed successfully with ${mappedProducts.length} products`);
+    
+    // Log the first few product IDs from the mapped products to verify all were processed
+    if (mappedProducts.length > 0) {
+      console.log(`Debug - First few fallback-mapped product IDs: ${mappedProducts.slice(0, 5).map(p => p.product_id).join(', ')}${mappedProducts.length > 5 ? '...' : ''}`);
+    }
     
     const fallbackAnalysis: AnalysisResult = {
       productType: "generic",
