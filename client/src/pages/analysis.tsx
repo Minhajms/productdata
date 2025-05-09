@@ -282,7 +282,8 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
       });
     } catch (error) {
       console.error("Error analyzing data:", error);
-      addLog(`Error during analysis: ${error.message}`, "error");
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addLog(`Error during analysis: ${errorMessage}`, "error");
     }
     
     addLog(`Basic analysis complete. Found ${missingFieldsCount} products with missing required fields`, "info");
@@ -302,7 +303,7 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   const enhanceProducts = (products: Product[]) => {
     if (!marketplace) return;
     
-    addLog("Starting content generation with AI (OpenAI with Gemini fallback)", "info");
+    addLog("Starting content generation with AI (OpenRouter with multiple AI models)", "info");
     addLog("Attempting to create optimized marketplace-ready content for your products", "info");
     
     // Add a special warning if we're in development or testing mode with limited API access
@@ -321,12 +322,16 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
       addLog("Warning: No product IDs found, using full product objects", "warning");
       enhanceMutation.mutate({ 
         products,
-        marketplace: marketplace.name
+        marketplace: marketplace.name,
+        aiProvider: 'openrouter',
+        modelPreference: 'gpt4o'
       });
     } else {
       enhanceMutation.mutate({ 
         productIds,
-        marketplace: marketplace.name
+        marketplace: marketplace.name,
+        aiProvider: 'openrouter',
+        modelPreference: 'gpt4o'
       });
     }
     
@@ -453,7 +458,7 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
                 {productData.length > 0 ? Math.min(Math.round(progress / 5), productData.length) : "-"}
               </span>
             </div>
-            <p className="text-gray-500 text-sm">OpenAI/Gemini content generation</p>
+            <p className="text-gray-500 text-sm">AI-powered content generation</p>
           </div>
         </div>
       </div>

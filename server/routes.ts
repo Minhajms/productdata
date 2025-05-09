@@ -291,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else {
         // No API keys available
-        throw new Error("No API keys available for product enhancement. Please set one of the following API keys in environment variables: OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY.");
+        throw new Error("No API keys available for product enhancement. Please set one of the following API keys in environment variables: OPENROUTER_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY.");
       }
       
       // If we don't have enhanced products at this point, something went wrong
