@@ -51,6 +51,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { products, productIds, marketplace } = req.body;
       let productsToEnhance = [];
       
+      console.log("Enhance endpoint called with:", {
+        hasProducts: products && Array.isArray(products), 
+        productsLength: products?.length || 0,
+        hasProductIds: productIds && Array.isArray(productIds),
+        productIdsLength: productIds?.length || 0,
+        marketplace
+      });
+      
       // If productIds are provided, fetch those products from the database
       if (productIds && Array.isArray(productIds) && productIds.length > 0) {
         console.log("Fetching products by IDs:", productIds);
@@ -60,10 +68,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Otherwise, use directly provided products array
       else if (products && Array.isArray(products) && products.length > 0) {
         productsToEnhance = products;
+        console.log(`Using ${productsToEnhance.length} directly provided products`);
       }
       
       if (productsToEnhance.length === 0) {
-        return res.status(400).json({ message: "No valid products provided" });
+        console.error("No products to enhance found. Request body:", req.body);
+        return res.status(400).json({ 
+          message: "No valid products provided",
+          error: "Could not find products to enhance. Check that product IDs are valid or products array is not empty."
+        });
       }
       
       // Determine which API to use

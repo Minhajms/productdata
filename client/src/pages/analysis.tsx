@@ -75,6 +75,7 @@ export function Analysis({ file, marketplace, onComplete, onBack, productData, s
   
   const enhanceMutation = useMutation({
     mutationFn: async (payload: { products?: Product[], productIds?: string[], marketplace: string }) => {
+      console.log("Enhancing products with payload:", payload);
       const res = await apiRequest("POST", "/api/enhance", payload);
       return res.json();
     },

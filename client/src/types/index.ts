@@ -3,8 +3,8 @@ import type { Product as DbProduct } from '@shared/schema';
 
 // Define client-side types, extending shared DB types as needed
 export interface Product extends Omit<DbProduct, 'price'> {
-  // Override price as number for client-side processing
-  price: number | null;
+  // Handle price as string or number for client-side flexibility
+  price: string | number | null;
 }
 
 export interface Marketplace {
