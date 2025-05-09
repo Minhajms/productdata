@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { 
   CheckCircle2, 
   AlertCircle, 
@@ -45,6 +47,7 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
     marketplace: "amazon",
     quality: "balanced", // balanced, creative, professional
     optimizeFor: "conversion", // conversion, seo, information
+    aiProvider: "optimized", // optimized, openrouter, enhanced, anthropic, openai, gemini
   });
   const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
   const [editMode, setEditMode] = useState(false);
@@ -72,10 +75,12 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
   
   const currentProduct = enhancedProducts[currentProductIndex] || {};
   
-  // Simulate enhancing a single product
-  const enhanceCurrentProduct = () => {
+  const { toast } = useToast();
+
+  // Enhance a single product by calling the API
+  const enhanceCurrentProduct = async () => {
     setEnhancingAll(false);
-    setEnhancementProgress(0);
+    setEnhancementProgress(10);
     
     // Store original values before enhancement
     setOriginalValues({
@@ -87,50 +92,61 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
       category: currentProduct.category || "",
     });
     
-    // Check if user wants to see the animation
-    if (showTransformationAnimation) {
-      setAnimationPlaying(true);
+    try {
+      // Prepare the product for enhancement
+      const productToEnhance = enhancedProducts[currentProductIndex];
+      setEnhancementProgress(30);
       
-      // Apply enhancement after animation would complete
-      setTimeout(() => {
-        applyEnhancement(currentProductIndex);
+      // Call the API with selected enhancement options
+      const response = await axios.post("/api/enhance", {
+        products: [productToEnhance],
+        marketplace: enhancementOptions.marketplace,
+        aiProvider: enhancementOptions.aiProvider,
+        quality: enhancementOptions.quality,
+        optimizeFor: enhancementOptions.optimizeFor
+      });
+      
+      setEnhancementProgress(90);
+      
+      // Update the enhanced product with the response
+      if (response.data && response.data.enhancedProducts && response.data.enhancedProducts.length > 0) {
+        const newProducts = [...enhancedProducts];
+        newProducts[currentProductIndex] = response.data.enhancedProducts[0];
+        setEnhancedProducts(newProducts);
         setSelectedTab("enhanced");
         setEditMode(false);
-        setAnimationPlaying(false);
-      }, 6000); // Wait for animation to complete
-      
-      return () => {};
-    } else {
-      // Traditional progress bar approach
-      const interval = setInterval(() => {
-        setEnhancementProgress(prev => {
-          const newProgress = prev + Math.floor(Math.random() * 10) + 5;
-          
-          if (newProgress >= 100) {
-            clearInterval(interval);
-            
-            // Apply enhancement after progress complete
-            setTimeout(() => {
-              applyEnhancement(currentProductIndex);
-              setSelectedTab("enhanced");
-              setEditMode(false);
-            }, 500);
-            
-            return 100;
-          }
-          
-          return newProgress;
+        setEnhancementProgress(100);
+        
+        // Show success toast
+        toast({
+          title: "Enhancement Complete",
+          description: "Product has been successfully enhanced using AI",
         });
-      }, 300);
+      } else {
+        throw new Error("No enhanced product data received from API");
+      }
+    } catch (error) {
+      console.error("Error enhancing product:", error);
+      setEnhancementProgress(0);
       
-      return () => clearInterval(interval);
+      // Show error toast
+      toast({
+        title: "Enhancement Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+      
+      // If the user wanted to see the animation, stop it
+      if (animationPlaying) {
+        setAnimationPlaying(false);
+      }
     }
   };
   
-  // Simulate enhancing all products
-  const enhanceAllProducts = () => {
+  // Enhance all products by calling the API
+  const enhanceAllProducts = async () => {
     setEnhancingAll(true);
-    setEnhancementProgress(0);
+    setEnhancementProgress(5);
     setCurrentProductIndex(0);
     
     // Store original values of first product
@@ -143,123 +159,90 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
       category: enhancedProducts[0].category || "",
     });
     
-    // Simulate enhancement progress for all products
-    const interval = setInterval(() => {
-      setEnhancementProgress(prev => {
-        const increment = Math.floor(Math.random() * 5) + 2;
-        const newProgress = prev + increment;
-        
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          
-          // Apply enhancements to all products
-          setTimeout(() => {
-            const newProducts = [...enhancedProducts];
-            enhancedProducts.forEach((_, index) => {
-              applyEnhancementToProduct(newProducts, index);
-            });
-            
-            setEnhancedProducts(newProducts);
-            setEnhancingAll(false);
-            setSelectedTab("enhanced");
-            setEditMode(false);
-          }, 500);
-          
-          return 100;
-        }
-        
-        return newProgress;
+    try {
+      // Set progress to indicate work has started
+      setEnhancementProgress(20);
+      
+      // Call the API to enhance all products
+      const response = await axios.post("/api/enhance", {
+        products: enhancedProducts,
+        marketplace: enhancementOptions.marketplace,
+        aiProvider: enhancementOptions.aiProvider,
+        quality: enhancementOptions.quality,
+        optimizeFor: enhancementOptions.optimizeFor
       });
-    }, 200);
-    
-    return () => clearInterval(interval);
-  };
-  
-  // Generate enhanced data for a product
-  const generateEnhancedData = (product: any) => {
-    const marketplace = enhancementOptions.marketplace;
-    
-    // Enhanced title based on marketplace and product type
-    let enhancedTitle = "";
-    let enhancedDescription = "";
-    let enhancedBulletPoints: string[] = [];
-    let enhancedCategory = "";
-    let enhancedBrand = "";
-    
-    if (product.category?.toLowerCase().includes("electronics") || (!product.category && product.title?.toLowerCase().includes("headphone"))) {
-      // Electronics product enhancements
-      enhancedTitle = `Premium ${product.brand || "Wireless"} Bluetooth 5.2 Headphones with Active Noise Cancellation, 40H Playtime & Hi-Fi Sound - Comfortable Over-Ear Design`;
-      enhancedDescription = `Experience immersive audio like never before with our Premium Bluetooth Headphones. Featuring advanced 5.2 Bluetooth technology for stable connections up to 33ft and Active Noise Cancellation that reduces ambient noise by up to 95%, these headphones create your own peaceful sanctuary anywhere.\n\nWith an industry-leading 40-hour battery life on a single charge and quick-charge technology providing 5 hours of playback from just 10 minutes of charging, these headphones are perfect for long commutes and travel. The ergonomic over-ear design with memory foam ear cushions ensures comfort during extended listening sessions.\n\nOur proprietary 40mm dynamic drivers deliver crisp highs, rich mids, and deep bass for studio-quality sound. Compatible with all Bluetooth-enabled devices and featuring intuitive touch controls for easy operation. Includes carrying case, USB-C charging cable, and 3.5mm audio cable for optional wired listening.`;
-      enhancedBulletPoints = [
-        "Advanced Active Noise Cancellation reduces ambient noise by up to 95%, creating immersive listening experiences in any environment",
-        "Exceptional 40-hour battery life with quick-charge technology providing 5 hours of playback from just 10 minutes of charging",
-        "Premium sound quality with 40mm dynamic drivers delivering crisp highs, rich mids, and deep, powerful bass",
-        "Ultra-comfortable over-ear design with memory foam ear cushions and adjustable headband for extended listening comfort",
-        "Seamless Bluetooth 5.2 connectivity with universal device compatibility and convenient touch controls"
-      ];
-      enhancedCategory = "Electronics > Audio > Headphones > Over-Ear Headphones";
-      enhancedBrand = product.brand || "SoundMaster";
-    } else if (product.category?.toLowerCase().includes("kitchen") || (!product.category && product.title?.toLowerCase().includes("coffee"))) {
-      // Kitchen product enhancements
-      enhancedTitle = `${product.brand || "BrewMaster"} Programmable 12-Cup Coffee Maker with Auto-Shut Off, Brew Strength Control & Thermal Carafe - Perfect for Home & Office`;
-      enhancedDescription = `Transform your morning routine with the ${product.brand || "BrewMaster"} Programmable Coffee Maker. This premium coffee maker combines convenience and exceptional brewing technology to deliver barista-quality coffee right in your kitchen or office.\n\nThe intuitive programming system allows you to set brewing times up to 24 hours in advance, so you can wake up to the enticing aroma of freshly brewed coffee. The innovative Brew Strength Control lets you customize your coffee exactly to your taste preference - from a mild, smooth cup to a bold, robust brew.\n\nOur exclusive thermal carafe keeps coffee hot for up to 4 hours without burning or compromising flavor, while the special water filtration system removes impurities for the cleanest tasting coffee. The easy-to-read LCD display provides at-a-glance information on water levels, brew strength, and timer settings.\n\nDesigned with safety and efficiency in mind, the auto-shut off feature activates after 2 hours of inactivity, providing peace of mind and energy savings. The sleek, modern design with stainless steel accents complements any kitchen décor while taking up minimal counter space.`;
-      enhancedBulletPoints = [
-        "Easy-to-use 24-hour programmable timer allows you to wake up to freshly brewed coffee every morning",
-        "Exclusive Brew Strength Control system lets you customize coffee from mild to bold based on your preference",
-        "Premium thermal carafe keeps coffee hot and fresh for up to 4 hours without burning",
-        "Advanced water filtration removes up to 97% of chlorine and impurities for superior tasting coffee",
-        "Automatic 2-hour shut-off feature provides safety and energy efficiency for busy households"
-      ];
-      enhancedCategory = "Home & Kitchen > Kitchen & Dining > Small Appliances > Coffee Makers";
-      enhancedBrand = product.brand || "BrewMaster";
-    } else {
-      // Generic product enhancements
-      enhancedTitle = `${product.brand || "Premium"} ${product.title || "Multi-Purpose Product"} with Advanced Features - Professional Grade Quality for Everyday Use`;
-      enhancedDescription = `Introducing our versatile ${product.title || "Multi-Purpose Product"}, designed to elevate your experience with superior performance and reliability. Crafted with premium materials and attention to detail, this product offers exceptional durability and functionality for years of dependable use.\n\nFeaturing an intuitive design that makes operation simple and straightforward, our product integrates seamlessly into your lifestyle. The ergonomic construction ensures comfortable handling while the compact footprint saves valuable space.\n\nEngineered with the latest technology, this product delivers consistent results every time. The versatile functionality makes it perfect for multiple applications, adapting to your changing needs with ease.\n\nBacked by our comprehensive warranty and dedicated customer support, you can purchase with confidence knowing that quality and satisfaction are guaranteed.`;
-      enhancedBulletPoints = [
-        "Crafted with premium materials for exceptional durability and years of reliable performance",
-        "Intuitive design with user-friendly controls makes operation simple and accessible for everyone",
-        "Versatile functionality adapts to multiple applications, making this a truly multi-purpose solution",
-        "Compact, space-saving footprint fits perfectly in any environment without sacrificing performance",
-        "Backed by our comprehensive warranty and responsive customer support for worry-free ownership"
-      ];
-      enhancedCategory = product.category || "Home & Garden > General Merchandise";
-      enhancedBrand = product.brand || "Quality Essentials";
+      
+      setEnhancementProgress(90);
+      
+      // Update the products with the enhanced data
+      if (response.data && response.data.enhancedProducts && response.data.enhancedProducts.length > 0) {
+        setEnhancedProducts(response.data.enhancedProducts);
+        setEnhancingAll(false);
+        setSelectedTab("enhanced");
+        setEditMode(false);
+        setEnhancementProgress(100);
+        
+        // Show success toast
+        toast({
+          title: "Enhancement Complete",
+          description: `Successfully enhanced ${response.data.enhancedProducts.length} products`,
+        });
+      } else {
+        throw new Error("No enhanced product data received from API");
+      }
+    } catch (error) {
+      console.error("Error enhancing all products:", error);
+      setEnhancementProgress(0);
+      setEnhancingAll(false);
+      
+      // Show error toast
+      toast({
+        title: "Enhancement Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     }
-    
-    return {
-      title: enhancedTitle,
-      description: enhancedDescription,
-      bullet_points: enhancedBulletPoints,
-      category: enhancedCategory,
-      brand: enhancedBrand,
-      price: product.price || "29.99",
-      status: "enhanced"
-    };
   };
   
-  // Apply enhancement to a specific product
-  const applyEnhancement = (index: number) => {
-    const newProducts = [...enhancedProducts];
-    applyEnhancementToProduct(newProducts, index);
-    setEnhancedProducts(newProducts);
-  };
-  
-  // Helper function to apply enhancement to a product in an array
-  const applyEnhancementToProduct = (productsArray: any[], index: number) => {
-    const product = productsArray[index];
-    const enhancedData = generateEnhancedData(product);
-    
-    productsArray[index] = {
-      ...product,
-      title: enhancedData.title,
-      description: enhancedData.description,
-      bullet_points: enhancedData.bullet_points,
-      category: enhancedData.category,
-      brand: enhancedData.brand,
-      price: product.price || enhancedData.price,
-      status: "enhanced"
-    };
+  // Apply enhancement by calling the API for a specific product
+  const applyEnhancement = async (index: number) => {
+    try {
+      // Prepare the product for enhancement
+      const productToEnhance = enhancedProducts[index];
+      
+      // Call the API with selected enhancement options
+      const response = await axios.post("/api/enhance", {
+        products: [productToEnhance],
+        marketplace: enhancementOptions.marketplace,
+        aiProvider: enhancementOptions.aiProvider,
+        quality: enhancementOptions.quality,
+        optimizeFor: enhancementOptions.optimizeFor
+      });
+      
+      // Update the enhanced product with the response
+      if (response.data && response.data.enhancedProducts && response.data.enhancedProducts.length > 0) {
+        const newProducts = [...enhancedProducts];
+        newProducts[index] = response.data.enhancedProducts[0];
+        setEnhancedProducts(newProducts);
+        
+        // Show success toast
+        toast({
+          title: "Enhancement Complete",
+          description: "Product has been successfully enhanced using AI",
+        });
+      } else {
+        throw new Error("No enhanced product data received from API");
+      }
+    } catch (error) {
+      console.error("Error enhancing product:", error);
+      
+      // Show error toast
+      toast({
+        title: "Enhancement Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    }
   };
   
   // Updates current product data
@@ -380,7 +363,18 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
         bulletPoints: Array.isArray(originalValues.bullet_points) ? originalValues.bullet_points : [],
       };
       
-      const enhancedProductData = generateEnhancedData(currentProduct);
+      // Create enhanced data for animation preview
+      const enhancedProductData = {
+        title: `Enhanced ${originalValues.title || "Product"}`,
+        description: `This is an AI-enhanced description of the product, optimized for ${enhancementOptions.marketplace} marketplace with focus on ${enhancementOptions.optimizeFor}.`,
+        bulletPoints: [
+          "First key feature or benefit of the product",
+          "Second key feature with marketplace-specific optimization",
+          "Third feature highlighting unique selling proposition",
+          "Fourth feature with SEO-optimized language",
+          "Fifth feature designed to increase conversion rate"
+        ]
+      };
       
       return (
         <div className="max-w-6xl mx-auto py-8">
@@ -650,6 +644,26 @@ export function Enhancement({ products, onEnhancementComplete, onBack }: Enhance
                       <SelectItem value="conversion">Conversion Rate</SelectItem>
                       <SelectItem value="seo">Search Visibility (SEO)</SelectItem>
                       <SelectItem value="information">Detailed Information</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="aiProvider">AI Provider</Label>
+                  <Select 
+                    value={enhancementOptions.aiProvider}
+                    onValueChange={(value) => setEnhancementOptions({...enhancementOptions, aiProvider: value})}
+                  >
+                    <SelectTrigger id="aiProvider">
+                      <SelectValue placeholder="Select AI provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="optimized">Optimized Marketplace Prompts</SelectItem>
+                      <SelectItem value="openrouter">OpenRouter</SelectItem>
+                      <SelectItem value="enhanced">Enhanced OpenAI</SelectItem>
+                      <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="gemini">Google Gemini</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
