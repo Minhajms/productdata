@@ -1,0 +1,47 @@
+BUILD GOAL: Create an AI agent that transforms basic product data into marketplace-ready listings through intelligent analysis and enhancement.
+
+PRODUCT CONCEPT:
+This is NOT a simple "CSV enhancement tool" - it's an AI product assistant that acts as an expert e-commerce team member. The agent should:
+
+1. ANALYZE products intelligently to understand what they actually are
+2. IDENTIFY marketplace optimization opportunities autonomously
+3. GENERATE professional-quality product content that reads like it was created by human experts
+4. OPTIMIZE listings specifically for each marketplace's unique algorithms and requirements
+
+KEY CAPABILITIES TO IMPLEMENT:
+
+1. INTELLIGENT PRODUCT UNDERSTANDING
+   - The agent should recognize products from minimal data
+   - It should understand product categories, features, and selling points
+   - The analysis should go beyond basic classification to truly understand the product
+
+2. AUTONOMOUS LISTING OPTIMIZATION
+   - The agent should identify what's missing without explicit instructions
+   - It should prioritize what enhancements will have the biggest impact
+   - The analysis should explain WHY changes are recommended
+
+3. HUMAN-QUALITY CONTENT CREATION
+   - All generated content must sound natural and professional
+   - Different marketplaces need different writing styles (Amazon vs. Etsy)
+   - Content should be genuinely persuasive and converting
+
+4. MARKETPLACE INTELLIGENCE
+   - The agent should know each marketplace's unique requirements
+   - It should apply marketplace-specific optimization strategies
+   - Formatting and structuring should match each platform's best practices
+
+USER EXPERIENCE:
+The user should feel like they're working with a knowledgeable e-commerce assistant, not just uploading a file to a tool. The agent should:
+
+- Explain its analysis and recommendations in conversational language
+- Show reasoning about why certain optimizations are suggested
+- Present before/after comparisons with explanations of improvements
+- Guide the user through the process like a consultant would
+
+IMPLEMENTATION FOCUS:
+- Create sophisticated prompts that elicit expert-level responses from the AI
+- Build a conversation flow that feels like interacting with an assistant
+- Focus on quality of output rather than just completing fields
+- Ensure the agent can explain its reasoning and recommendations
+
+This should be positioned as an AI teammate that brings expertise to the user's business, not just a utility that fills in missing data.

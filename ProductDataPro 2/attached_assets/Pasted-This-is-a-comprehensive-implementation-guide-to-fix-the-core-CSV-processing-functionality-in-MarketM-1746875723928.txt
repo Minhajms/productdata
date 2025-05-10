@@ -1,0 +1,460 @@
+This is a comprehensive implementation guide to fix the core CSV processing functionality in MarketMind AI. The UI is already working correctly, but the system is currently displaying predefined "Office Chair" results regardless of what CSV is uploaded.
+
+## PROBLEM TO FIX:
+When users upload CSV files containing product data (like headphones, coffee makers, etc.), the system is not actually analyzing the uploaded content. Instead, it's showing the same predefined results for office chairs.
+
+## CORRECT USER FLOW TO IMPLEMENT:
+1. User uploads a CSV file with product data
+2. System parses the actual CSV content (not showing mock data)
+3. System analyzes the CSV to identify the real product type
+4. System uses OpenRouter API to generate enhancements specific to that product
+5. System displays enhancements based on the real data, not hardcoded results
+
+## COMPLETE IMPLEMENTATION:
+
+import pandas as pd
+import openrouter
+import json
+import os
+import traceback
+from io import StringIO
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# Configure OpenRouter API
+openrouter.api_key = os.environ.get("OPENROUTER_API_KEY")
+
+@app.route('/api/process-csv', methods=['POST'])
+def process_csv():
+    """Main endpoint to process uploaded CSV files"""
+    try:
+        # Log receipt of request
+        print("Processing CSV file upload request")
+        
+        # Check if file is present
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part in request"}), 400
+        
+        file = request.files['file']
+        marketplace = request.form.get('marketplace', 'amazon')
+        
+        # Verify file has a name
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Read and decode the file
+        try:
+            file_content = file.read().decode('utf-8')
+            print(f"Successfully read CSV with size: {len(file_content)} bytes")
+        except Exception as e:
+            return jsonify({"error": f"Error reading file: {str(e)}"}), 400
+        
+        # Parse the CSV content
+        parsed_data = parse_csv(file_content)
+        if "error" in parsed_data:
+            return jsonify(parsed_data), 400
+        
+        # Extract products from parsed data
+        products = parsed_data["products"]
+        if not products:
+            return jsonify({"error": "No product data found in CSV"}), 400
+            
+        print(f"Successfully parsed {len(products)} products")
+        
+        # Analyze first product to determine type
+        product_analysis = detect_product_type(products[0])
+        if "error" in product_analysis:
+            return jsonify({"error": f"Product analysis failed: {product_analysis['error']}"}), 500
+        
+        product_type = product_analysis.get("product_type", "unknown product")
+        category = product_analysis.get("category", "unknown category")
+        
+        print(f"Detected product type: {product_type}, category: {category}")
+        
+        # Process each product (limiting to first 5 for performance)
+        enhanced_products = []
+        for i, product in enumerate(products[:5]):
+            print(f"Enhancing product {i+1}/{min(5, len(products))}")
+            
+            # Generate enhanced content for this product
+            enhanced_title = enhance_product_title(product, product_type, marketplace)
+            enhanced_description = enhance_product_description(product, product_type, marketplace)
+            enhanced_bullets = enhance_product_bullets(product, product_type, marketplace)
+            
+            # Calculate quality score
+            score = calculate_enhancement_score(product, {
+                "title": enhanced_title,
+                "description": enhanced_description,
+                "bullet_points": enhanced_bullets
+            })
+            
+            # Create enhanced product object
+            enhanced_product = {
+                "original": product,
+                "enhanced": {
+                    "title": enhanced_title,
+                    "description": enhanced_description,
+                    "bullet_points": enhanced_bullets
+                },
+                "score": score
+            }
+            
+            enhanced_products.append(enhanced_product)
+        
+        # Return the enhanced results
+        return jsonify({
+            "success": True,
+            "product_type": product_type,
+            "category": category,
+            "enhanced_products": enhanced_products,
+            "total_products": len(products),
+            "enhanced_count": len(enhanced_products)
+        })
+        
+    except Exception as e:
+        print(f"Error processing CSV: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            "error": f"CSV processing failed: {str(e)}",
+            "details": traceback.format_exc()
+        }), 500
+
+def parse_csv(file_content):
+    """Parse CSV content into a list of product dictionaries"""
+    try:
+        # Read CSV data
+        df = pd.read_csv(StringIO(file_content))
+        
+        # Check if empty
+        if df.empty:
+            return {"error": "CSV file is empty"}
+        
+        # Convert to list of dictionaries
+        products = []
+        for _, row in df.iterrows():
+            # Convert row to dict and handle NaN values
+            product = {}
+            for col in df.columns:
+                if pd.notna(row[col]):
+                    product[col] = row[col]
+                else:
+                    product[col] = ""
+                    
+            products.append(product)
+            
+        return {
+            "success": True,
+            "products": products,
+            "column_count": len(df.columns),
+            "row_count": len(df)
+        }
+        
+    except Exception as e:
+        print(f"CSV parsing error: {str(e)}")
+        return {"error": f"Failed to parse CSV: {str(e)}"}
+
+def detect_product_type(product_data):
+    """Analyze product data to determine the product type"""
+    try:
+        # Convert product data to string for the prompt
+        product_info = ""
+        for key, value in product_data.items():
+            if value:
+                product_info += f"{key}: {value}\n"
+        
+        # Create prompt for product type detection
+        prompt = f"""
+        As a product analyst, examine this product data and identify what specific product it represents:
+        
+        {product_info}
+        
+        Analyze this data and determine:
+        1. What specific product type is this? (Be precise, e.g., 'wireless headphones' not just 'electronics')
+        2. What category does this product belong to?
+        3. What are 3-5 key features of this product type?
+        
+        Return ONLY a JSON object with these fields:
+        {{
+          "product_type": "specific product type",
+          "category": "product category",
+          "key_features": ["feature1", "feature2", "feature3"]
+        }}
+        """
+        
+        # Call OpenRouter API
+        response = openrouter.chat.completions.create(
+            model="anthropic/claude-3-5-sonnet",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        
+        # Parse response
+        result = json.loads(response.choices[0].message.content)
+        
+        # Validate response
+        required_fields = ["product_type", "category"]
+        for field in required_fields:
+            if field not in result:
+                result[field] = "unknown"
+                
+        return result
+        
+    except Exception as e:
+        print(f"Product detection error: {str(e)}")
+        return {"error": f"Product detection failed: {str(e)}"}
+
+def enhance_product_title(product_data, product_type, marketplace):
+    """Generate an enhanced product title"""
+    try:
+        # Get original title
+        original_title = product_data.get('title', 
+                        product_data.get('Title', 
+                        product_data.get('product_title', '')))
+        
+        # Extract key product details
+        brand = product_data.get('brand', product_data.get('Brand', ''))
+        
+        # Prepare product info
+        product_info = ""
+        for key, value in product_data.items():
+            if value and key.lower() not in ['description', 'product_description', 'desc']:
+                product_info += f"{key}: {value}\n"
+        
+        # Create prompt for title enhancement
+        prompt = f"""
+        You are an e-commerce SEO specialist for {marketplace}. Create an optimized product title for this {product_type}.
+        
+        ORIGINAL TITLE: {original_title}
+        PRODUCT TYPE: {product_type}
+        PRODUCT DETAILS:
+        {product_info}
+        
+        Create an SEO-optimized title that:
+        1. Follows {marketplace} guidelines (max 200 characters)
+        2. Includes brand name and key product features
+        3. Incorporates important keywords early
+        4. Is readable and appealing to customers
+        
+        For {marketplace}:
+        - Amazon: Include brand, model, key features, color/size
+        - Shopify: Focus on primary benefit + product type + brand
+        - Etsy: Emphasize unique aspects, materials, or customization
+        
+        Return ONLY the enhanced title text, nothing else.
+        """
+        
+        # Call OpenRouter API
+        response = openrouter.chat.completions.create(
+            model="anthropic/claude-3-5-sonnet",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        # Get enhanced title
+        enhanced_title = response.choices[0].message.content.strip()
+        
+        return enhanced_title
+        
+    except Exception as e:
+        print(f"Title enhancement error: {str(e)}")
+        # Return original title or placeholder on error
+        return product_data.get('title', f"{product_type} - Enhanced")
+
+def enhance_product_description(product_data, product_type, marketplace):
+    """Generate an enhanced product description"""
+    try:
+        # Get original description
+        original_description = product_data.get('description', 
+                              product_data.get('Description',
+                              product_data.get('product_description', '')))
+        
+        # Prepare product info
+        product_info = ""
+        for key, value in product_data.items():
+            if value:
+                product_info += f"{key}: {value}\n"
+        
+        # Create prompt for description enhancement
+        prompt = f"""
+        You are a professional e-commerce copywriter for {marketplace}. Create a compelling product description for this {product_type}.
+        
+        ORIGINAL DESCRIPTION: {original_description}
+        PRODUCT TYPE: {product_type}
+        PRODUCT DETAILS:
+        {product_info}
+        
+        Write a product description that:
+        1. Starts with a strong opening sentence highlighting the primary benefit
+        2. Uses natural, conversational language (not robotic or obviously AI-generated)
+        3. Highlights key features and their benefits to the customer
+        4. Is organized in 2-3 short, scannable paragraphs
+        5. Incorporates relevant keywords naturally
+        6. Is 150-200 words in length
+        
+        For {marketplace}:
+        - Amazon: Focus on features and specifications with factual language
+        - Shopify: Emphasize brand story and lifestyle benefits
+        - Etsy: Highlight handmade aspects, materials, and craftsmanship
+        
+        Do NOT:
+        - Use phrases like "this product" or "this item"
+        - Include obvious template phrases or repeated patterns
+        - Mention pricing, shipping, or return policies
+        
+        Return ONLY the enhanced description text, nothing else.
+        """
+        
+        # Call OpenRouter API
+        response = openrouter.chat.completions.create(
+            model="anthropic/claude-3-5-sonnet",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        # Get enhanced description
+        enhanced_description = response.choices[0].message.content.strip()
+        
+        return enhanced_description
+        
+    except Exception as e:
+        print(f"Description enhancement error: {str(e)}")
+        # Return original description or placeholder on error
+        return original_description or f"Description for {product_type} with premium features."
+
+def enhance_product_bullets(product_data, product_type, marketplace):
+    """Generate enhanced bullet points"""
+    try:
+        # Get original bullets if available
+        original_bullets = product_data.get('bullet_points', 
+                          product_data.get('Bullet_Points',
+                          product_data.get('features', [])))
+        
+        if isinstance(original_bullets, str):
+            try:
+                # Try to parse as JSON if it's a string
+                original_bullets = json.loads(original_bullets)
+            except:
+                # Split by newlines or other common separators if not JSON
+                original_bullets = [b.strip() for b in original_bullets.replace('\r\n', '\n').split('\n') if b.strip()]
+        
+        # Prepare product info
+        product_info = ""
+        for key, value in product_data.items():
+            if value and key.lower() not in ['description', 'product_description', 'desc']:
+                product_info += f"{key}: {value}\n"
+        
+        # Create prompt for bullet points
+        prompt = f"""
+        You are a product marketing specialist for {marketplace}. Create 5 persuasive bullet points for this {product_type}.
+        
+        ORIGINAL BULLETS: {original_bullets if original_bullets else "None provided"}
+        PRODUCT TYPE: {product_type}
+        PRODUCT DETAILS:
+        {product_info}
+        
+        Create 5 persuasive bullet points that:
+        1. Lead with a benefit, followed by the feature that delivers it
+        2. Use varied sentence structures (not all following the same pattern)
+        3. Include specific measurements, materials, or specifications
+        4. Target the most important selling points
+        5. Follow {marketplace}'s bullet point best practices
+        
+        For {marketplace}:
+        - Amazon: Start each with a benefit headline in capital letters
+        - Shopify: Use a more conversational tone focusing on benefits
+        - Etsy: Emphasize unique aspects and customization options
+        
+        Return ONLY a JSON array of 5 bullet points, like this:
+        ["Bullet 1", "Bullet 2", "Bullet 3", "Bullet 4", "Bullet 5"]
+        """
+        
+        # Call OpenRouter API
+        response = openrouter.chat.completions.create(
+            model="anthropic/claude-3-5-sonnet",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        
+        # Parse the response
+        try:
+            result = json.loads(response.choices[0].message.content)
+            if isinstance(result, list):
+                bullets = result
+            elif "bullets" in result:
+                bullets = result["bullets"]
+            elif "bullet_points" in result:
+                bullets = result["bullet_points"]
+            else:
+                # Extract first list found in the JSON
+                for key, value in result.items():
+                    if isinstance(value, list):
+                        bullets = value
+                        break
+                else:
+                    bullets = ["Feature 1", "Feature 2", "Feature 3", "Feature 4", "Feature 5"]
+        except:
+            # Fallback if JSON parsing fails
+            content = response.choices[0].message.content
+            if "[" in content and "]" in content:
+                try:
+                    bullets = json.loads(content[content.find("["):content.rfind("]")+1])
+                except:
+                    # Last resort fallback
+                    bullets = ["Feature 1", "Feature 2", "Feature 3", "Feature 4", "Feature 5"]
+        
+        return bullets
+        
+    except Exception as e:
+        print(f"Bullet points enhancement error: {str(e)}")
+        # Return placeholder bullets on error
+        return [
+            f"Premium quality {product_type}",
+            "Durable construction",
+            "Easy to use",
+            "Excellent customer support",
+            "Satisfaction guaranteed"
+        ]
+
+def calculate_enhancement_score(original_product, enhanced_content):
+    """Calculate a quality score for the enhancements"""
+    score = 0
+    
+    # Title scoring
+    original_title = original_product.get('title', '')
+    enhanced_title = enhanced_content.get('title', '')
+    
+    if enhanced_title and len(enhanced_title) > len(original_title) * 1.2:
+        score += 20  # More descriptive title
+    elif enhanced_title and len(enhanced_title) > len(original_title):
+        score += 15  # Somewhat improved title
+    else:
+        score += 5   # Minimal improvement
+    
+    # Description scoring
+    original_desc = original_product.get('description', '')
+    enhanced_desc = enhanced_content.get('description', '')
+    
+    if enhanced_desc and len(enhanced_desc) > len(original_desc) * 1.5:
+        score += 35  # Significantly improved description
+    elif enhanced_desc and len(enhanced_desc) > len(original_desc):
+        score += 25  # Somewhat improved description
+    else:
+        score += 10  # Minimal improvement
+    
+    # Bullet points scoring
+    bullet_points = enhanced_content.get('bullet_points', [])
+    if bullet_points and len(bullet_points) >= 5:
+        score += 25  # Good set of bullet points
+    elif bullet_points and len(bullet_points) >= 3:
+        score += 15  # Decent bullet points
+    else:
+        score += 5   # Minimal bullet points
+    
+    # Quality bonus
+    if score > 70:
+        score += 10  # Bonus for overall high quality
+    
+    # Ensure score stays in range
+    return min(max(score, 25), 100)
+
+if __name__ == '__main__':
+    app.run(debug=True)
