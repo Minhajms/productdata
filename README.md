@@ -1,57 +1,72 @@
 # ProductDataPro
 
-ProductDataPro is a smart e-commerce product data enhancement platform powered by AI. It intelligently optimizes product listings across multiple marketplaces to improve visibility and conversions. The platform is fully developed using Replit with a "Yes Vibe" coding approach and is currently live
-## 🚀 Features
+**ProductDataPro** is an AI-powered platform built to enhance e-commerce product listings across multiple marketplaces. It transforms incomplete or unoptimized data into compelling, SEO-friendly content designed to boost visibility and conversions.
+
+> ⚠️ This project is under active development and currently hosted as a preview on [Replit](https://replit.com). Some features are experimental or incomplete. Built entirely using the **"Yes Vibe"** coding approach!
+
+---
+
+## 🚀 Features (Work in Progress)
 
 - **Intelligent CSV Processing**
-  - Smart column detection and mapping
+  - Smart column detection and mapping *(partial support)*
   - Handles unstructured CSV files
   - Automatic product ID generation
 
 - **AI-Powered Enhancement**
-  - Automated product title optimization
-  - Smart description generation
+  - Product title optimization *(basic implemented)*
+  - Smart description generation *(in progress)*
   - Bullet point enhancement
-  - SEO optimization
+  - SEO optimization *(planned)*
 
 - **Multi-Marketplace Support**
-  - Amazon
-  - eBay
-  - Shopify
-  - Custom marketplace templates
+  - Amazon *(basic template)*
+  - eBay *(planned)*
+  - Shopify *(planned)*
+  - Custom templates *(configurable)*
 
-- **Advanced Analytics**
+- **Advanced Analytics** *(Coming Soon)*
   - Listing quality scoring
   - Conversion rate optimization
   - Competitive analysis
   - Performance tracking
 
+---
+
 ## 🛠️ Tech Stack
 
-- **Frontend**
-  - React
-  - TypeScript
-  - Tailwind CSS
-  - Shadcn UI Components
+**Frontend**
+- React  
+- TypeScript  
+- Tailwind CSS  
+- Shadcn UI Components  
 
-- **Backend**
-  - Node.js
-  - Express
-  - TypeScript
-  - SQLite (Drizzle ORM)
+**Backend**
+- Node.js  
+- Express  
+- TypeScript  
+- SQLite (Drizzle ORM)  
 
-- **AI Integration**
-  - OpenRouter API
-  - OpenAI GPT Models
-  - Custom prompt engineering
+**AI Integration**
+- OpenRouter API  
+- OpenAI GPT Models  
+- Custom prompt engineering  
 
-## 🚀 Getting Started
+---
+
+## 🚧 Project Status
+
+This is a live but **incomplete prototype**, built on Replit. Major features are being actively developing and iterated.
+
+---
+
+## 🔧 Getting Started
 
 1. **Clone the repository**
    ```bash
    git clone https://github.com/Minhajms/ProductDataPro.git
    cd ProductDataPro
-   ```
+
 
 2. **Install dependencies**
    ```bash
