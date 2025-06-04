@@ -1,6 +1,0 @@
-product_id,title,description,price,brand,category,images
-PROD001,Classic Men's T-Shirt,A comfortable and durable cotton t-shirt for everyday wear,19.99,FashionBrand,Clothing,http://example.com/img1.jpg
-PROD002,Wireless Bluetooth Headphones,High-quality sound with noise cancellation and long battery life,89.95,,Electronics,http://example.com/img2.jpg
-PROD003,Stainless Steel Water Bottle,Keep your drinks hot or cold for hours with this insulated bottle,25.50,EcoWare,,http://example.com/img3.jpg
-PROD004,Organic Coffee Beans - 1lb Bag,Premium dark roast coffee beans from sustainable farms,12.99,,,http://example.com/img4.jpg
-PROD005,,Smart indoor camera with motion detection and night vision,45.00,TechHome,Home Security,http://example.com/img5.jpg
