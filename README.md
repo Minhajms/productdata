@@ -49,7 +49,7 @@ ProductDataPro is a smart e-commerce product data enhancement platform powered b
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ProductDataPro.git
+   git clone https://github.com/Minhajms/ProductDataPro.git
    cd ProductDataPro
    ```
 
@@ -92,7 +92,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- Your Name - Initial work
+- Your Name - MINHAJ S
 
 ## 🙏 Acknowledgments
 
