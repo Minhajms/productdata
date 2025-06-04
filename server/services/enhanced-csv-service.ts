@@ -6,57 +6,217 @@
 import Papa from 'papaparse';
 import { Product } from '../../shared/schema';
 import { analyzeCSVStructureWithAI } from './enhanced-openai-service';
+import { Transform, TransformCallback } from 'stream';
+import { createReadStream } from 'fs';
+// @ts-ignore
+import { detect } from 'jschardet';
+
+interface CSVProcessingOptions {
+  delimiter?: string;
+  encoding?: BufferEncoding;
+  chunkSize?: number;
+  onProgress?: (progress: number) => void;
+}
+
+interface CSVProcessingResult {
+  products: Product[];
+  issues: string[];
+  stats: {
+    totalRows: number;
+    processedRows: number;
+    skippedRows: number;
+    encoding: string;
+    delimiter: string;
+  };
+}
+
+interface EncodingResult {
+  encoding: string;
+  confidence: number;
+}
+
+interface PapaParseResult<T> {
+  data: T[];
+  errors: Papa.ParseError[];
+  meta: Papa.ParseMeta;
+}
 
 /**
- * Parses CSV string into an array of product objects with intelligent field detection enhanced by AI
- * @param csvString CSV content as a string
- * @returns Array of product objects
+ * Detects CSV file encoding and delimiter
  */
-export async function parseCSVWithAI(csvString: string): Promise<Product[]> {
+async function detectCSVFormat(filePath: string): Promise<{ encoding: BufferEncoding; delimiter: string }> {
+  return new Promise((resolve, reject) => {
+    const sampleSize = 4096;
+    const buffer = Buffer.alloc(sampleSize);
+    const stream = createReadStream(filePath, { start: 0, end: sampleSize - 1 });
+    
+    stream.on('data', (chunk: Buffer) => {
+      buffer.fill(chunk);
+    });
+    
+    stream.on('end', () => {
+      // Detect encoding
+      const encodingResult = detect(buffer) as EncodingResult;
+      const encoding = (encodingResult.encoding || 'utf-8') as BufferEncoding;
+      
+      // Detect delimiter
+      const content = buffer.toString(encoding);
+      const lines = content.split('\n').slice(0, 5);
+      const delimiters = [',', ';', '\t', '|'];
+      const delimiterCounts = delimiters.map(d => ({
+        delimiter: d,
+        count: lines.reduce((sum: number, line: string) => sum + (line.match(new RegExp(d, 'g')) || []).length, 0)
+      }));
+      
+      const mostCommon = delimiterCounts.reduce((max, curr) => 
+        curr.count > max.count ? curr : max
+      );
+      
+      resolve({
+        encoding,
+        delimiter: mostCommon.delimiter
+      });
+    });
+    
+    stream.on('error', (error: Error) => reject(error));
+  });
+}
+
+/**
+ * Processes CSV file with streaming support for large files
+ */
+export async function processCSVFile(
+  filePath: string,
+  options: CSVProcessingOptions = {}
+): Promise<CSVProcessingResult> {
+  const format = await detectCSVFormat(filePath);
+  const issues: string[] = [];
+  const products: Product[] = [];
+  let totalRows = 0;
+  let processedRows = 0;
+  let skippedRows = 0;
+  
+  return new Promise((resolve, reject) => {
+    const stream = createReadStream(filePath, {
+      encoding: options.encoding || format.encoding
+    });
+    
+    const transform = new Transform({
+      objectMode: true,
+      transform(chunk: Buffer, encoding: string, callback: TransformCallback) {
+        try {
+          const lines = chunk.toString().split('\n');
+          totalRows += lines.length;
+          
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            
+            try {
+              const result = Papa.parse<Record<string, string>>(line, {
+                delimiter: options.delimiter || format.delimiter,
+                header: true
+              });
+              
+              if (result.data && result.data.length > 0) {
+                const row = result.data[0];
+                const product = mapCSVRowToProduct(row);
+                if (product) {
+                  products.push(product);
+                  processedRows++;
+                } else {
+                  skippedRows++;
+                }
+              }
+            } catch (error) {
+              if (error instanceof Error) {
+                issues.push(`Error processing row: ${error.message}`);
+              } else {
+                issues.push('Unknown error processing row');
+              }
+              skippedRows++;
+            }
+          }
+          
+          if (options.onProgress) {
+            options.onProgress(processedRows / totalRows);
+          }
+          
+          callback();
+        } catch (error) {
+          if (error instanceof Error) {
+            callback(error);
+          } else {
+            callback(new Error('Unknown error in transform'));
+          }
+        }
+      }
+    });
+    
+    stream
+      .pipe(transform)
+      .on('finish', () => {
+        resolve({
+          products,
+          issues,
+          stats: {
+            totalRows,
+            processedRows,
+            skippedRows,
+            encoding: format.encoding,
+            delimiter: format.delimiter
+          }
+        });
+      })
+      .on('error', (error: Error) => reject(error));
+  });
+}
+
+/**
+ * Enhanced CSV parsing with support for multiple formats and large files
+ */
+export async function parseCSVWithAI(
+  csvString: string,
+  options: CSVProcessingOptions = {}
+): Promise<Product[]> {
   return new Promise((resolve, reject) => {
     try {
       console.log("Starting AI-enhanced CSV parsing");
       
-      // First, parse the CSV to get the data
+      // Detect delimiter if not provided
+      const delimiter = options.delimiter || detectDelimiter(csvString);
+      
       Papa.parse(csvString, {
         header: true,
         skipEmptyLines: true,
-        complete: async (results) => {
+        delimiter,
+        complete: async (results: PapaParseResult<Record<string, string>>) => {
           try {
-            console.log(`Successfully parsed CSV with ${results.data.length} rows and ${Object.keys(results.data[0] || {}).length} columns`);
+            console.log(`Successfully parsed CSV with ${results.data.length} rows`);
             
-            // Check if we have any data
             if (!results.data.length) {
               return resolve([]);
             }
             
-            // Get column names
-            const firstRow = results.data[0] as Record<string, unknown>;
+            // Get column names and check for duplicates
+            const firstRow = results.data[0];
             const columnNames = Object.keys(firstRow);
-            console.log("CSV columns:", columnNames.join(", "));
+            const duplicateColumns = findDuplicateColumns(columnNames);
             
-            // Take a sample of rows for AI analysis (limit to save token usage)
-            const sampleRows = results.data.slice(0, Math.min(5, results.data.length));
-            
-            // Perform AI analysis of CSV structure
-            console.log("Analyzing CSV structure with AI...");
-            const aiAnalysis = await analyzeCSVStructureWithAI(sampleRows, columnNames);
-            console.log("AI analysis complete. Creating field mappings.");
-            
-            // Create field mappings based on AI analysis
-            const fieldMappings: Record<string, string> = {};
-            
-            if (aiAnalysis && aiAnalysis.columns) {
-              aiAnalysis.columns.forEach((col: any) => {
-                if (col.standardMapping && col.confidence >= 0.6) {
-                  fieldMappings[col.name] = col.standardMapping;
-                }
-              });
+            if (duplicateColumns.length > 0) {
+              console.warn("Found duplicate columns:", duplicateColumns);
             }
             
-            console.log("AI-suggested field mappings:", fieldMappings);
+            // Take a sample of rows for AI analysis
+            const sampleRows = results.data.slice(0, Math.min(5, results.data.length));
             
-            // Process each row to create product objects
+            // Perform AI analysis
+            console.log("Analyzing CSV structure with AI...");
+            const aiAnalysis = await analyzeCSVStructureWithAI(sampleRows, columnNames);
+            
+            // Create field mappings
+            const fieldMappings = createFieldMappings(aiAnalysis, columnNames);
+            
+            // Process rows
             const products: Product[] = [];
             let currentIndex = 0;
             
@@ -64,103 +224,141 @@ export async function parseCSVWithAI(csvString: string): Promise<Product[]> {
               currentIndex++;
               if (currentIndex % 100 === 0) {
                 console.log(`Processing row ${currentIndex}/${results.data.length}`);
+                if (options.onProgress) {
+                  options.onProgress(currentIndex / results.data.length);
+                }
               }
               
-              // Create product ID (use existing or generate new)
-              const productId = extractProductId(row) || generateRandomId();
-              
-              // Initialize product object with required fields
-              const product: Product = {
-                product_id: productId,
-                title: null,
-                description: null,
-                price: null,
-                brand: null,
-                category: null,
-                bullet_points: null,
-                images: [],
-                asin: null,
-                status: "pending",
-                created_at: new Date(),
-                updated_at: new Date()
-              };
-              
-              // Map CSV fields to product properties using AI-suggested mappings
-              mapCSVRowToProduct(row, product, fieldMappings);
-              
-              products.push(product);
+              const product = mapCSVRowToProduct(row, fieldMappings);
+              if (product) {
+                products.push(product);
+              }
             }
             
-            console.log(`Successfully created ${products.length} product objects from CSV`);
+            console.log(`Successfully created ${products.length} product objects`);
             resolve(products);
-          } catch (error: any) {
+          } catch (error) {
             console.error("Error during AI-enhanced CSV processing:", error);
-            const errorMessage = error?.message || 'Unknown error';
-            reject(new Error(`Failed to process CSV with AI enhancement: ${errorMessage}`));
+            reject(new Error(`Failed to process CSV: ${error instanceof Error ? error.message : 'Unknown error'}`));
           }
-        },
-        error: (error: any) => {
-          const message = error.message || 'Unknown parsing error';
-          console.error("Error during CSV parsing:", message);
-          reject(new Error(`Failed to parse CSV: ${message}`));
         }
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Exception during CSV parsing setup:", error);
-      const errorMessage = error?.message || 'Unknown error';
-      reject(new Error(`Failed to set up CSV parsing: ${errorMessage}`));
+      reject(new Error(`Failed to set up CSV parsing: ${error instanceof Error ? error.message : 'Unknown error'}`));
     }
   });
 }
 
 /**
- * Maps CSV row data to product fields using AI-suggested field mappings
- * @param row The CSV row data
- * @param product The product object to map to
- * @param fieldMappings AI-suggested mappings between CSV columns and product fields
+ * Detects the most likely delimiter in a CSV string
  */
-function mapCSVRowToProduct(row: any, product: Product, fieldMappings: Record<string, string>): void {
-  // Process each field in the row
+function detectDelimiter(csvString: string): string {
+  const delimiters = [',', ';', '\t', '|'];
+  const lines = csvString.split('\n').slice(0, 5);
+  
+  const delimiterCounts = delimiters.map(d => ({
+    delimiter: d,
+    count: lines.reduce((sum, line) => sum + (line.match(new RegExp(d, 'g')) || []).length, 0)
+  }));
+  
+  const mostCommon = delimiterCounts.reduce((max, curr) => 
+    curr.count > max.count ? curr : max
+  );
+  
+  return mostCommon.delimiter;
+}
+
+/**
+ * Finds duplicate column names in the CSV
+ */
+function findDuplicateColumns(columns: string[]): string[] {
+  const counts = columns.reduce((acc, col) => {
+    acc[col] = (acc[col] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  return Object.entries(counts)
+    .filter(([_, count]) => count > 1)
+    .map(([col]) => col);
+}
+
+/**
+ * Creates field mappings based on AI analysis
+ */
+function createFieldMappings(aiAnalysis: any, columnNames: string[]): Record<string, string> {
+  const fieldMappings: Record<string, string> = {};
+  
+  if (aiAnalysis && aiAnalysis.columns) {
+    aiAnalysis.columns.forEach((col: any) => {
+      if (col.standardMapping && col.confidence >= 0.6) {
+        fieldMappings[col.name] = col.standardMapping;
+      }
+    });
+  }
+  
+  return fieldMappings;
+}
+
+/**
+ * Maps a CSV row to a product object
+ */
+function mapCSVRowToProduct(row: Record<string, string>, fieldMappings?: Record<string, string>): Product | null {
+  if (!row) return null;
+  
+  // Create product ID (use existing or generate new)
+  const productId = extractProductId(row) || generateRandomId();
+  
+  // Initialize product object with required fields
+  const product: Product = {
+    product_id: productId,
+    title: null,
+    description: null,
+    price: null,
+    brand: null,
+    category: null,
+    bullet_points: null,
+    images: [],
+    asin: null,
+    status: "pending",
+    created_at: new Date(),
+    updated_at: new Date()
+  };
+  
+  // Map CSV fields to product properties
   for (const [key, value] of Object.entries(row)) {
     if (value === undefined || value === null || value === '') continue;
     
     const strValue = String(value).trim();
+    const mappedField = fieldMappings?.[key] || normalizeFieldName(key);
     
-    // Use AI mapping if available, otherwise use simple normalization
-    const mappedField = fieldMappings[key] || normalizeFieldName(key);
-    
-    // Handle special fields with custom processing
+    // Handle special fields
     if (mappedField === 'price') {
-      // Extract numeric part if the price has currency symbols
       const numericPrice = strValue.replace(/[^0-9.]/g, '');
       const price = parseFloat(numericPrice);
-      // Store as string (will be handled as decimal in the database)
       product.price = isNaN(price) ? null : String(price);
     }
     else if (mappedField === 'images') {
-      // Handle image URLs (comma or semicolon separated)
       const imageUrls = strValue.split(/[,;]/).map(url => url.trim()).filter(url => url.length > 0);
       if (imageUrls.length > 0) {
         product.images = imageUrls;
       }
     }
     else if (mappedField === 'bullet_points') {
-      // Handle bullet points (comma or semicolon separated)
       const bulletPoints = strValue.split(/[,;]/).map(point => point.trim()).filter(point => point.length > 0);
       if (bulletPoints.length > 0) {
         product.bullet_points = bulletPoints;
       }
     }
     else if (mappedField in product) {
-      // Handle field type matching based on expected type
-      // For string-type fields only - exclude arrays and dates
       const stringFields = ['product_id', 'title', 'description', 'brand', 'category', 'asin', 'material', 'color', 'status', 'price'];
       if (stringFields.includes(mappedField)) {
-        // Safe to assign string to string fields
         (product as any)[mappedField] = strValue;
       }
     }
   }
+  
+  return product;
 }
 
 /**
